@@ -19,14 +19,14 @@ jobs:
 
     - name: Check trailing whitespace and line endings
       run: |
-        echo "Checking for trailing whitespace..."
+        echo "Checking for trailing whitespace"
         if grep -r --include="*.java" --include="*.md" --include="*.yml" --include="*.yaml" '[[:space:]]$' .; then
           echo "ERROR: Files contain trailing whitespace"
           exit 1
         fi
         echo "PASSED: No trailing whitespace found"
 
-        echo "Checking for files without final newline..."
+        echo "Checking for files without final newline"
         for file in $(find . \( -name "*.java" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" \) | grep -v ".git" | grep -v "build/"); do
           if [ -s "$file" ] && [ "$(tail -c1 "$file" | wc -l)" -eq 0 ]; then
             echo "ERROR: $file does not end with newline"
@@ -37,7 +37,7 @@ jobs:
 
     - name: Check line length
       run: |
-        echo "Checking line length (max 120 characters)..."
+        echo "Checking line length (max 120 characters)"
         VIOLATIONS=0
         for file in $(find . \( -name "*.java" -o -name "*.md" \) | grep -v ".git" | grep -v "build/"); do
           if grep -n ".\{121,\}" "$file"; then
@@ -88,7 +88,7 @@ jobs:
           CONFIG_ARG="--config lint/.markdownlint.json"
         fi
 
-        echo "Linting Markdown files..."
+        echo "Linting Markdown files"
         if ! markdownlint $CONFIG_ARG $(find . -name "*.md" | grep -v node_modules | grep -v ".git"); then
           echo "ERROR: Markdown linting failed"
           echo "Fix the markdown issues and try again"

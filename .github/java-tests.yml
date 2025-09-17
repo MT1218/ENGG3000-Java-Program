@@ -1,0 +1,100 @@
+name: Build and Test Java
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
+
+    - name: Clean build directory
+      run: ./gradlew clean
+
+    - name: Compile Java source code
+      run: |
+        echo "Compiling main Java sources"
+        ./gradlew compileJava
+        echo "Main source compilation successful"
+
+    - name: Compile test code
+      run: |
+        echo "Compiling test sources"
+        ./gradlew compileTestJava
+        echo "Test compilation successful"
+
+    - name: Run tests
+      run: |
+        echo "Running all tests"
+        ./gradlew test
+        echo "All tests passed"
+
+    - name: Generate test report
+      if: always()
+      run: |
+        echo "Test results available at: build/reports/tests/test/index.html"
+        if [ -f "app/build/reports/tests/test/index.html" ]; then
+          echo "Test report generated successfully"
+        else
+          echo "No test report found"
+        fi
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: |
+          app/build/reports/tests/
+          app/build/test-results/
+        retention-days: 7
+
+    - name: Build full project
+      run: |
+        echo "Building complete project"
+        ./gradlew build
+        echo "Build successful"
+
+    - name: Check build artifacts
+      run: |
+        echo "Checking generated artifacts"
+        ls -la app/build/libs/ || echo "No JAR files found"
+        ls -la app/build/classes/java/main/ || echo "No compiled classes found"
+
+    - name: Display build summary
+      if: success()
+      run: |
+        echo "Build Summary:"
+        echo "- Java source compilation: PASSED"
+        echo "- Test compilation: PASSED"
+        echo "- Test execution: PASSED"
+        echo "- Full build: PASSED"
+        echo "- Artifacts generated: PASSED"
+
+    - name: Build failure summary
+      if: failure()
+      run: |
+        echo "Build failed. Check the logs above for details."
+        echo "Common issues:"
+        echo "- Compilation errors in source code"
+        echo "- Test failures"
+        echo "- Missing dependencies"
+        echo "- Gradle configuration issues"
