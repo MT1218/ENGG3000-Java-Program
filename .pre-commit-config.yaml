@@ -1,0 +1,61 @@
+repos:
+  # Basic formatting
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+
+  # Java validation
+  - repo: local
+    hooks:
+      - id: gradle-build-check
+        name: Gradle build check
+        entry: bash -c
+        language: system
+        files: \.java$
+        args:
+          - |
+            echo "Running Gradle build to validate Java code..."
+            cd "$(git rev-parse --show-toplevel)"
+            if ! ./gradlew compileJava compileTestJava; then
+              echo "Gradle compilation failed - fix errors before committing"
+              exit 1
+            fi
+            echo "Java compilation successful"
+
+  # Style validation
+  - repo: local
+    hooks:
+      - id: java-basic-style
+        name: Basic Java style check
+        entry: bash -c
+        language: system
+        files: \.java$
+        args:
+          - |
+            VIOLATIONS=0
+            for file in "$@"; do
+              # Skip build directories
+              if [[ "$file" == *"/build/"* ]]; then continue; fi
+
+              # Check for basic style issues
+              if grep -n 'class[[:space:]]\+[a-z]' "$file"; then
+                echo "ERROR: $file - Class names should start with uppercase"
+                VIOLATIONS=$((VIOLATIONS + 1))
+              fi
+            done
+
+            if [ $VIOLATIONS -gt 0 ]; then
+              echo "Found $VIOLATIONS style violations"
+              exit 1
+            fi
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.37.0
+    hooks:
+      - id: markdownlint
+        args: ['--fix']
+        files: \.(md|markdown)$
