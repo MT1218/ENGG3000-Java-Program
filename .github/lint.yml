@@ -1,0 +1,107 @@
+name: Lint Code
+
+on:
+  push:
+    branches: [ main, multithreading ]
+  pull_request:
+    branches: [ main, multithreading ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install markdownlint-cli
+      run: npm install -g markdownlint-cli
+
+    - name: Check trailing whitespace and line endings
+      run: |
+        echo "Checking for trailing whitespace..."
+        if grep -r --include="*.java" --include="*.md" --include="*.yml" --include="*.yaml" '[[:space:]]$' .; then
+          echo "ERROR: Files contain trailing whitespace"
+          exit 1
+        fi
+        echo "PASSED: No trailing whitespace found"
+
+        echo "Checking for files without final newline..."
+        for file in $(find . \( -name "*.java" -o -name "*.md" -o -name "*.yml" -o -name "*.yaml" \) | grep -v ".git" | grep -v "build/"); do
+          if [ -s "$file" ] && [ "$(tail -c1 "$file" | wc -l)" -eq 0 ]; then
+            echo "ERROR: $file does not end with newline"
+            exit 1
+          fi
+        done
+        echo "PASSED: All files end with newline"
+
+    - name: Check line length
+      run: |
+        echo "Checking line length (max 120 characters)..."
+        VIOLATIONS=0
+        for file in $(find . \( -name "*.java" -o -name "*.md" \) | grep -v ".git" | grep -v "build/"); do
+          if grep -n ".\{121,\}" "$file"; then
+            echo "ERROR: Line too long in $file"
+            VIOLATIONS=$((VIOLATIONS + 1))
+          fi
+        done
+        if [ $VIOLATIONS -gt 0 ]; then
+          echo "Found $VIOLATIONS line length violations"
+          exit 1
+        fi
+        echo "PASSED: All lines within 120 character limit"
+
+    - name: Java Lint
+      run: |
+        echo "Running basic Java Lint"
+        VIOLATIONS=0
+
+        for file in $(find . -name "*.java" | grep -v "build/"); do
+          echo "Checking: $file"
+
+          # Check class naming (should start with uppercase)
+          if grep -n 'class[[:space:]]\+[a-z]' "$file"; then
+            echo "ERROR: $file - Class names should start with uppercase"
+            VIOLATIONS=$((VIOLATIONS + 1))
+          fi
+
+          # Check for proper package declaration
+          if ! grep -q '^package mcp;' "$file"; then
+            echo "ERROR: $file - Missing or incorrect package declaration"
+            VIOLATIONS=$((VIOLATIONS + 1))
+          fi
+        done
+
+        if [ $VIOLATIONS -gt 0 ]; then
+          echo "Found $VIOLATIONS Java style violations"
+          exit 1
+        fi
+        echo "PASSED: Basic Java style checks passed"
+
+    - name: Lint Markdown files
+      run: |
+        if [ ! -f "lint/.markdownlint.json" ]; then
+          echo "No .markdownlint.json config found, using default settings"
+          CONFIG_ARG=""
+        else
+          echo "Using markdownlint config: lint/.markdownlint.json"
+          CONFIG_ARG="--config lint/.markdownlint.json"
+        fi
+
+        echo "Linting Markdown files..."
+        if ! markdownlint $CONFIG_ARG $(find . -name "*.md" | grep -v node_modules | grep -v ".git"); then
+          echo "ERROR: Markdown linting failed"
+          echo "Fix the markdown issues and try again"
+          exit 1
+        fi
+        echo "PASSED: All Markdown files passed linting"
+
+    - name: Summary
+      if: success()
+      run: |
+        echo "All linting checks passed"
+        echo "Trailing whitespace check"
+        echo "Final newline check"
+        echo "Line length check (120 chars)"
+        echo "Java Lint"
+        echo "Markdown linting"

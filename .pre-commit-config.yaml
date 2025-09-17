@@ -17,7 +17,7 @@ repos:
         files: \.java$
         args:
           - |
-            echo "Running Gradle build to validate Java code..."
+            echo "Running Gradle build to validate Java code"
             cd "$(git rev-parse --show-toplevel)"
             if ! ./gradlew compileJava compileTestJava; then
               echo "Gradle compilation failed - fix errors before committing"
@@ -29,7 +29,7 @@ repos:
   - repo: local
     hooks:
       - id: java-basic-style
-        name: Basic Java style check
+        name: Java Lint
         entry: bash -c
         language: system
         files: \.java$
@@ -59,3 +59,43 @@ repos:
       - id: markdownlint
         args: ['--fix']
         files: \.(md|markdown)$
+
+  # Line length check
+  - repo: local
+    hooks:
+      - id: line-length-check
+        name: Check line length
+        entry: bash -c
+        language: system
+        files: \.(java|md)$  # Remove .gradle files
+        args:
+          - |
+            VIOLATIONS=0
+            for file in "$@"; do
+              if [[ "$file" == *"/build/"* ]]; then continue; fi
+              if grep -n ".\{121,\}" "$file"; then
+                echo "ERROR: Line too long in $file"
+                VIOLATIONS=$((VIOLATIONS + 1))
+              fi
+            done
+            if [ $VIOLATIONS -gt 0 ]; then
+              exit 1
+            fi
+
+  # Package validation
+  - repo: local
+    hooks:
+      - id: java-package-check
+        name: Java package validation
+        entry: bash -c
+        language: system
+        files: \.java$
+        args:
+          - |
+            for file in "$@"; do
+              if [[ "$file" == *"/build/"* ]]; then continue; fi
+              if ! grep -q '^package mcp;' "$file"; then
+                echo "ERROR: $file - Missing or incorrect package declaration"
+                exit 1
+              fi
+            done
