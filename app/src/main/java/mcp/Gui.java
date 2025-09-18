@@ -9,6 +9,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.JButton;
@@ -64,12 +65,10 @@ public class Gui {
     JPanel topPanel = createTopPanel();
     JPanel centerPanel = createCenterPanel();
     JPanel rightPanel = createStatusPanel();
-    JPanel bottomPanel = createBottomPanel();
 
     frame.add(topPanel, BorderLayout.NORTH);
     frame.add(centerPanel, BorderLayout.CENTER);
     frame.add(rightPanel, BorderLayout.EAST);
-    frame.add(bottomPanel, BorderLayout.SOUTH);
 
     frame.setLocationRelativeTo(null); // Center the window
     frame.setVisible(true);
@@ -338,7 +337,7 @@ public class Gui {
   private JPanel createStatusPanel() {
     JPanel statusPanel = new JPanel(new BorderLayout());
     statusPanel.setBorder(BorderFactory.createTitledBorder("System Status"));
-    statusPanel.setPreferredSize(new java.awt.Dimension(350, 0));
+    statusPanel.setPreferredSize(new java.awt.Dimension(700, 0));
 
     // Current Status Section
     JPanel currentStatusPanel = new JPanel(new GridLayout(6, 1, 5, 5));
@@ -388,18 +387,6 @@ public class Gui {
     statusPanel.add(messageLogPanel, BorderLayout.CENTER);
 
     return statusPanel;
-  }
-
-  private JPanel createBottomPanel() {
-    JPanel bottomPanel = new JPanel(new FlowLayout());
-    bottomPanel.setBorder(BorderFactory.createTitledBorder("System Information"));
-
-    JLabel infoLabel =
-        new JLabel("Bridge Control System - Manual Override Available in Override Mode Only");
-    infoLabel.setFont(new Font("Arial", Font.ITALIC, 12));
-    bottomPanel.add(infoLabel);
-
-    return bottomPanel;
   }
 
   private void updateModeDisplay() {
@@ -512,9 +499,8 @@ public class Gui {
       SwingUtilities.invokeLater(
           () -> {
             try {
-              String timeStamp =
-                  java.time.LocalTime.now()
-                      .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"));
+              String timeStamp = java.time.LocalTime.now()
+                  .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"));
               messageLogArea.append(timeStamp + " - " + message + "\n");
               messageLogArea.setCaretPosition(messageLogArea.getDocument().getLength());
             } catch (Exception e) {
