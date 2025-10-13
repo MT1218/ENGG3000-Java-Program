@@ -1,6 +1,10 @@
 package mcp;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +48,7 @@ public class AppTest {
       java.lang.reflect.Field sendIpField = appClass.getDeclaredField("SEND_IP_ADDR");
       sendIpField.setAccessible(true);
       String sendIp = (String) sendIpField.get(null);
-      assertEquals("10.123.100.16", sendIp);  // Updated to match your App.java
+      assertEquals("10.123.100.181", sendIp);
 
     } catch (Exception e) {
       fail("Could not access constants: " + e.getMessage());
