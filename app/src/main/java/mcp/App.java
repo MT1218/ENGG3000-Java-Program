@@ -3,6 +3,7 @@ package mcp;
 public class App {
   private static final int RECEIVE_PORT_NUMBER = 3032;
   private static final int SEND_PORT_NUMBER = 3031;
+  // Put 127.0.0.1 for Wokwi Simulator
   private static final String SEND_IP_ADDR = "10.123.100.181";
 
   public static void main(String[] args) throws Exception {
