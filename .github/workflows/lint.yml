@@ -2,9 +2,9 @@ name: Lint Code
 
 on:
   push:
-    branches: [ main, multithreading ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, multithreading ]
+    branches: [ main ]
 
 jobs:
   lint:
