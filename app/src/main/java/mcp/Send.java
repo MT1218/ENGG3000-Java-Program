@@ -32,8 +32,7 @@ public class Send {
       // global variables
       byte[] sendBuffer = message.getBytes();
 
-      DatagramPacket sendPacket =
-          new DatagramPacket(sendBuffer, sendBuffer.length, espSendIpAddr, espSendPortNumber);
+      DatagramPacket sendPacket = new DatagramPacket(sendBuffer, sendBuffer.length, espSendIpAddr, espSendPortNumber);
       espSendSocket.send(sendPacket);
 
       System.out.println("Sent message to esp: " + message);

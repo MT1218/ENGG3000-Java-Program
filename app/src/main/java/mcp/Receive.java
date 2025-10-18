@@ -12,8 +12,6 @@ public class Receive extends Thread {
 
   Receive(int espReceivePortNumber, Gui userInterface) {
     this.userInterface = userInterface;
-    // Initialise the DatagramSocket to receive messages based on the given port
-    // number
     try {
       espReceiveSocket = new DatagramSocket(espReceivePortNumber);
       System.out.println("Receive socket initialized on port " + espReceivePortNumber);
@@ -61,24 +59,38 @@ public class Receive extends Thread {
         // Parse and update GUI with received status
         if (receivedMessage.startsWith("STATUS|")) {
           parseStatusMessage(receivedMessage);
-          // Also log status updates to message log with key information
+
+          // Log abbreviated status to message log
+          String mode = extractValue(receivedMessage, "MODE");
           String bridgeState = extractValue(receivedMessage, "BRIDGE");
           String gateState = extractValue(receivedMessage, "GATE");
           String roadLight = extractValue(receivedMessage, "ROAD_LIGHT");
           String boatLight = extractValue(receivedMessage, "BOAT_LIGHT");
+          String bridgeLight = extractValue(receivedMessage, "BRIDGE_LIGHT");
           String sequence = extractValue(receivedMessage, "SEQUENCE");
+          String stage = extractValue(receivedMessage, "MOVEMENT_STATE");
 
-          userInterface.updateMessageLog(
-              "STATUS: Bridge="
-                  + bridgeState
-                  + ", Gate="
-                  + gateState
-                  + ", Road="
-                  + roadLight
-                  + ", Boat="
-                  + boatLight
-                  + ", Seq="
-                  + sequence);
+          String statusLog = "STATUS: Mode=" + mode + ", Bridge=" + bridgeState + ", Gate=" + gateState +
+              ", Road=" + roadLight + ", Boat=" + boatLight + ", BLight=" + bridgeLight +
+              ", Seq=" + sequence + ", Stage=" + stage;
+
+          // Add override-specific info if present
+          String queue = extractValue(receivedMessage, "QUEUE");
+          String executing = extractValue(receivedMessage, "EXECUTING");
+          if (!queue.equals("UNKNOWN")) {
+            statusLog += ", Queue=" + queue + ", Exec=" + executing;
+          }
+
+          userInterface.updateMessageLog(statusLog);
+
+        } else if (receivedMessage.startsWith("COMMAND_EXECUTION - ")) {
+          String command = receivedMessage.substring(20);
+          userInterface.updateMessageLog("✓ Executed: " + command);
+
+        } else if (receivedMessage.startsWith("SYSTEM_UPDATE - ")) {
+          String message = receivedMessage.substring(16);
+          userInterface.updateMessageLog("⚠ System: " + message);
+
         } else {
           // Handle other messages (command confirmations, etc.)
           userInterface.updateMessageLog("ESP32: " + receivedMessage);
@@ -106,10 +118,13 @@ public class Receive extends Thread {
       String boatDistance = "0";
       String roadLight = "UNKNOWN";
       String boatLight = "UNKNOWN";
+      String bridgeLight = "OFF";
 
       for (String part : parts) {
-        if (part.startsWith("MODE:")) {
-          mode = part.substring(5);
+        // Handle first part which includes "STATUS - MODE:..."
+        if (part.contains("MODE:")) {
+          int modeIndex = part.indexOf("MODE:");
+          mode = part.substring(modeIndex + 5);
         } else if (part.startsWith("BRIDGE:")) {
           bridgeState = part.substring(7);
         } else if (part.startsWith("GATE:")) {
@@ -122,12 +137,14 @@ public class Receive extends Thread {
           roadLight = part.substring(11);
         } else if (part.startsWith("BOAT_LIGHT:")) {
           boatLight = part.substring(11);
+        } else if (part.startsWith("BRIDGE_LIGHT:")) {
+          bridgeLight = part.substring(13);
         }
       }
 
       // Update GUI with parsed status
       userInterface.updateSystemStatus(
-          mode, bridgeState, gateState, roadDistance, boatDistance, roadLight, boatLight);
+          mode, bridgeState, gateState, roadDistance, boatDistance, roadLight, boatLight, bridgeLight);
 
     } catch (Exception e) {
       System.out.println("Error parsing status message: " + e.getMessage());
@@ -140,8 +157,10 @@ public class Receive extends Thread {
     try {
       String[] parts = message.split("\\|");
       for (String part : parts) {
-        if (part.startsWith(key + ":")) {
-          return part.substring(key.length() + 1);
+        // Use contains for MODE since it has "STATUS - " prefix
+        if (part.contains(key + ":")) {
+          int keyIndex = part.indexOf(key + ":");
+          return part.substring(keyIndex + key.length() + 1);
         }
       }
     } catch (Exception e) {

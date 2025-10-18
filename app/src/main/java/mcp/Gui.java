@@ -19,6 +19,7 @@ import java.awt.geom.AffineTransform;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -80,10 +81,12 @@ public class Gui {
     JPanel topPanel = createTopPanel();
     JPanel centerPanel = createCenterPanel();
     JPanel rightPanel = createRightPanel();
+    JPanel bottomPanel = createLogPanel();
 
     frame.add(topPanel, BorderLayout.NORTH);
     frame.add(centerPanel, BorderLayout.CENTER);
     frame.add(rightPanel, BorderLayout.EAST);
+    frame.add(bottomPanel, BorderLayout.SOUTH);
 
     frame.setLocationRelativeTo(null);
     frame.setVisible(true);
@@ -249,10 +252,8 @@ public class Gui {
     rightPanel.setBackground(new Color(236, 240, 241));
 
     controlPanel = createControlPanel();
-    JPanel logPanel = createLogPanel();
 
     rightPanel.add(controlPanel, BorderLayout.CENTER);
-    rightPanel.add(logPanel, BorderLayout.SOUTH);
 
     return rightPanel;
   }
@@ -273,25 +274,60 @@ public class Gui {
     gbc.fill = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 1.0;
 
+    // Traffic Sequence Section
+    addSectionLabel(panel, "TRAFFIC SEQUENCES", gbc, 0);
+    addControlButton(panel, "ALLOW BOAT TRAFFIC", new Color(41, 128, 185), "allow_boat_traffic", gbc, 1, null);
+    addControlButton(panel, "ALLOW ROAD TRAFFIC", new Color(41, 128, 185), "allow_road_traffic", gbc, 2, null);
+
     // Bridge Control Section
-    addSectionLabel(panel, "BRIDGE CONTROL", gbc, 0);
-    addControlButton(panel, "OPEN BRIDGE", new Color(52, 73, 94), "open_bridge", gbc, 1, "OPEN");
-    addControlButton(panel, "CLOSE BRIDGE", new Color(52, 73, 94), "close_bridge", gbc, 2, "CLOSED");
+    addSectionLabel(panel, "BRIDGE CONTROL", gbc, 3);
+    addControlButton(panel, "OPEN BRIDGE", new Color(52, 73, 94), "open_bridge", gbc, 4, "OPEN");
+    addControlButton(panel, "CLOSE BRIDGE", new Color(52, 73, 94), "close_bridge", gbc, 5, "CLOSED");
 
     // Gate Control Section
-    addSectionLabel(panel, "GATE CONTROL", gbc, 3);
-    addControlButton(panel, "OPEN GATE", new Color(52, 73, 94), "open_gate", gbc, 4, "OPEN");
-    addControlButton(panel, "CLOSE GATE", new Color(52, 73, 94), "close_gate", gbc, 5, "CLOSED");
+    addSectionLabel(panel, "GATE CONTROL", gbc, 6);
+    addControlButton(panel, "OPEN GATE", new Color(52, 73, 94), "open_gate", gbc, 7, "OPEN");
+    addControlButton(panel, "CLOSE GATE", new Color(52, 73, 94), "close_gate", gbc, 8, "CLOSED");
 
-    // Light Control Section
-    addSectionLabel(panel, "LIGHT CONTROL", gbc, 6);
-    addControlButton(panel, "LIGHTS ON", new Color(52, 73, 94), "lights_on", gbc, 7, null);
-    addControlButton(panel, "LIGHTS OFF", new Color(52, 73, 94), "lights_off", gbc, 8, null);
+    // Road Light Control Section
+    addSectionLabel(panel, "ROAD LIGHTS", gbc, 9);
+    addControlButton(panel, "RED", new Color(231, 76, 60), "road_lights_red", gbc, 10, null);
+    addControlButton(panel, "YELLOW", new Color(241, 196, 15), "road_lights_yellow", gbc, 11, null);
+    addControlButton(panel, "GREEN", new Color(46, 204, 113), "road_lights_green", gbc, 12, null);
+
+    // Boat Light Control Section
+    addSectionLabel(panel, "BOAT LIGHTS", gbc, 13);
+    addControlButton(panel, "RED", new Color(231, 76, 60), "boat_lights_red", gbc, 14, null);
+    addControlButton(panel, "GREEN", new Color(46, 204, 113), "boat_lights_green", gbc, 15, null);
+
+    // Bridge Lights Control Section
+    addSectionLabel(panel, "BRIDGE LIGHTS", gbc, 16);
+
+    gbc.gridy = 17;
+    JCheckBox manualControlCheckbox = new JCheckBox("Manual Control");
+    manualControlCheckbox.setFont(new Font("Arial", Font.PLAIN, 12));
+    manualControlCheckbox.setBackground(new Color(236, 240, 241));
+    manualControlCheckbox.addActionListener(e -> {
+      if (isOverrideMode && mcpSendObject != null) {
+        if (manualControlCheckbox.isSelected()) {
+          mcpSendObject.sendMessage("manual_bridge_lights_true");
+          updateMessageLog("SENT: manual_bridge_lights_true");
+        } else {
+          mcpSendObject.sendMessage("manual_bridge_lights_false");
+          updateMessageLog("SENT: manual_bridge_lights_false");
+        }
+      }
+    });
+    manualControlCheckbox.setEnabled(false);
+    panel.add(manualControlCheckbox, gbc);
+
+    addControlButton(panel, "LIGHTS ON", new Color(255, 193, 7), "manual_bridge_lights_on", gbc, 18, null);
+    addControlButton(panel, "LIGHTS OFF", new Color(158, 158, 158), "manual_bridge_lights_off", gbc, 19, null);
 
     // Initially disable all buttons
     Component[] components = panel.getComponents();
     for (Component component : components) {
-      if (component instanceof JButton) {
+      if (component instanceof JButton || component instanceof JCheckBox) {
         component.setEnabled(false);
       }
     }
@@ -392,23 +428,37 @@ public class Gui {
 
   private JPanel createLogPanel() {
     JPanel panel = new JPanel(new BorderLayout());
-    panel.setBorder(BorderFactory.createTitledBorder(
-        BorderFactory.createLineBorder(new Color(52, 73, 94), 2),
-        "Message Log",
-        0,
-        0,
-        new Font("Arial", Font.BOLD, 14),
-        new Color(52, 73, 94)));
-    panel.setPreferredSize(new Dimension(0, 300));
+    panel.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createMatteBorder(2, 0, 0, 0, new Color(52, 73, 94)),
+        BorderFactory.createEmptyBorder(5, 10, 5, 10)));
+    panel.setPreferredSize(new Dimension(0, 200));
+    panel.setBackground(new Color(30, 30, 30));
+
+    // Title label
+    JLabel titleLabel = new JLabel("Message Log");
+    titleLabel.setFont(new Font("Arial", Font.BOLD, 12));
+    titleLabel.setForeground(new Color(200, 200, 200));
+    titleLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
     messageLogArea = new JTextPane();
     messageLogArea.setEditable(false);
     messageLogArea.setFont(new Font("Consolas", Font.PLAIN, 12));
-    messageLogArea.setBackground(new Color(39, 55, 70));
+    messageLogArea.setBackground(new Color(30, 30, 30));
+    messageLogArea.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
     JScrollPane scrollPane = new JScrollPane(messageLogArea);
     scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+    scrollPane.setBorder(null);
+    scrollPane.getVerticalScrollBar().setBackground(new Color(40, 40, 40));
+    scrollPane.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
+      @Override
+      protected void configureScrollBarColors() {
+        this.thumbColor = new Color(80, 80, 80);
+        this.trackColor = new Color(40, 40, 40);
+      }
+    });
 
+    panel.add(titleLabel, BorderLayout.NORTH);
     panel.add(scrollPane, BorderLayout.CENTER);
 
     return panel;
@@ -431,7 +481,7 @@ public class Gui {
   private void toggleControlPanel(boolean enabled) {
     Component[] components = controlPanel.getComponents();
     for (Component component : components) {
-      if (component instanceof JButton) {
+      if (component instanceof JButton || component instanceof JCheckBox) {
         component.setEnabled(enabled);
       }
     }
@@ -455,7 +505,7 @@ public class Gui {
 
   public void updateSystemStatus(String mode, String bridgeState, String gateState,
       String roadDistance, String boatDistance,
-      String roadLight, String boatLight) {
+      String roadLight, String boatLight, String bridgeLight) {
     SwingUtilities.invokeLater(() -> {
       this.currentMode = mode;
       this.bridgeState = bridgeState;
@@ -500,6 +550,9 @@ public class Gui {
       // Update animation
       bridgePanel.updateState(bridgeState, gateState, roadLight, boatLight);
 
+      // Update bridge lights
+      bridgePanel.updateBridgeLights(bridgeLight.equals("ON"));
+
       // Update button states
       updateButtonStates();
     });
@@ -542,11 +595,13 @@ public class Gui {
     private String gateState = "OPEN";
     private String roadLight = "RED";
     private String boatLight = "RED";
+    private boolean bridgeLightsOn = false;
 
     private float bridgeAngle = 0f;
     private float gateAngle = 90f;
     private Timer animationTimer;
     private int waveOffset = 0;
+    private int lightPulse = 0;
 
     public BridgeAnimationPanel() {
       setBackground(new Color(240, 242, 245));
@@ -567,6 +622,7 @@ public class Gui {
         }
 
         waveOffset = (waveOffset + 1) % 40;
+        lightPulse = (lightPulse + 1) % 60;
         needsRepaint = true;
 
         if (needsRepaint) {
@@ -581,6 +637,10 @@ public class Gui {
       this.gateState = gate;
       this.roadLight = road;
       this.boatLight = boat;
+    }
+
+    public void updateBridgeLights(boolean lightsOn) {
+      this.bridgeLightsOn = lightsOn;
     }
 
     @Override
@@ -696,6 +756,9 @@ public class Gui {
       g2d.drawLine(centerX - bridgeWidth, waterY - 85 + liftOffset + deckHeight / 2 + 3,
           centerX + bridgeWidth, waterY - 85 + liftOffset + deckHeight / 2 + 3);
 
+      // Draw bridge lights on top of deck
+      drawBridgeLights(g2d, centerX, waterY, liftOffset, deckHeight);
+
       // Draw approach roads
       g2d.setColor(new Color(40, 42, 45));
       g2d.fillRect(0, waterY - 89, centerX - bridgeWidth, 8);
@@ -722,6 +785,44 @@ public class Gui {
 
       // Draw traffic lights
       drawTrafficLights(g2d, centerX, waterY);
+    }
+
+    private void drawBridgeLights(Graphics2D g2d, int centerX, int waterY, int liftOffset, int deckHeight) {
+      int bridgeWidth = 180;
+      int lightY = waterY - 85 + liftOffset - deckHeight / 2 - 10;
+
+      // Calculate pulse effect
+      int pulseIntensity = (int) (Math.sin(lightPulse * 0.1) * 15 + 15);
+
+      // Draw 8 lights evenly spaced across the bridge
+      int numLights = 8;
+      int spacing = (bridgeWidth * 2) / (numLights + 1);
+
+      for (int i = 1; i <= numLights; i++) {
+        int lightX = centerX - bridgeWidth + (i * spacing);
+
+        if (bridgeLightsOn) {
+          // Draw glow effect when lights are on
+          g2d.setColor(new Color(255, 220, 100, 60 + pulseIntensity));
+          g2d.fillOval(lightX - 12, lightY - 12, 24, 24);
+
+          // Draw bright light
+          g2d.setColor(new Color(255, 240, 150));
+          g2d.fillOval(lightX - 6, lightY - 6, 12, 12);
+
+          // Draw highlight
+          g2d.setColor(new Color(255, 255, 200));
+          g2d.fillOval(lightX - 3, lightY - 4, 4, 4);
+        } else {
+          // Draw dark/off light
+          g2d.setColor(new Color(60, 60, 60));
+          g2d.fillOval(lightX - 5, lightY - 5, 10, 10);
+        }
+
+        // Draw light fixture/mount
+        g2d.setColor(new Color(50, 50, 50));
+        g2d.fillRect(lightX - 2, lightY + 5, 4, 6);
+      }
     }
 
     private void drawGate(Graphics2D g2d, int gateX, int waterY, int liftOffset, boolean isLeftSide) {
