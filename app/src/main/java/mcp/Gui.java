@@ -442,7 +442,7 @@ public class Gui {
 
     messageLogArea = new JTextPane();
     messageLogArea.setEditable(false);
-    messageLogArea.setFont(new Font("Consolas", Font.PLAIN, 12));
+    messageLogArea.setFont(new Font("Consolas", Font.PLAIN, 11));
     messageLogArea.setBackground(new Color(30, 30, 30));
     messageLogArea.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 

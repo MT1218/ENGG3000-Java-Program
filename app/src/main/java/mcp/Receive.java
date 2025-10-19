@@ -18,9 +18,7 @@ public class Receive extends Thread {
     } catch (SocketException e) {
       System.out.println("CRITICAL ERROR - Failed to create receive socket: " + e);
       System.out.println("Port " + espReceivePortNumber + " is likely already in use.");
-      System.out.println("Try closing other instances of this program or use different ports.");
 
-      // Set socket to null to prevent NullPointerException
       espReceiveSocket = null;
 
       if (userInterface != null) {
@@ -28,7 +26,6 @@ public class Receive extends Thread {
             "ERROR: Failed to bind to port " + espReceivePortNumber + " - " + e.getMessage());
       }
     }
-    // Initialise the buffer to receive messages
     receiveBuffer = new byte[1024];
   }
 
@@ -36,80 +33,67 @@ public class Receive extends Thread {
   public void run() {
     System.out.println("Receive thread started - listening for ESP32 messages...");
 
-    // Check if socket was created successfully
     if (espReceiveSocket == null) {
       System.out.println("Cannot start receive thread - socket creation failed");
       if (userInterface != null) {
-        userInterface.updateMessageLog(
-            "ERROR: Cannot receive messages - socket failed to initialize");
+        userInterface.updateMessageLog("ERROR: Cannot receive messages - socket failed to initialize");
       }
-      return; // Exit the thread
+      return;
     }
 
-    // Run until stopped
     while (true) {
-      // Listen and wait for a message
       try {
         DatagramPacket receivePacket = new DatagramPacket(receiveBuffer, receiveBuffer.length);
         espReceiveSocket.receive(receivePacket);
 
-        String receivedMessage = new String(receivePacket.getData(), 0, receivePacket.getLength());
+        String receivedMessage = new String(receivePacket.getData(), 0, receivePacket.getLength()).trim();
         System.out.println("Received from ESP32: " + receivedMessage);
 
-        // Parse and update GUI with received status
-        if (receivedMessage.startsWith("STATUS|")) {
+        // Handle STATUS messages (with or without space after colon)
+        if (receivedMessage.startsWith("STATUS:") || receivedMessage.startsWith("STATUS :")) {
           parseStatusMessage(receivedMessage);
-
-          // Log abbreviated status to message log
-          String mode = extractValue(receivedMessage, "MODE");
-          String bridgeState = extractValue(receivedMessage, "BRIDGE");
-          String gateState = extractValue(receivedMessage, "GATE");
-          String roadLight = extractValue(receivedMessage, "ROAD_LIGHT");
-          String boatLight = extractValue(receivedMessage, "BOAT_LIGHT");
-          String bridgeLight = extractValue(receivedMessage, "BRIDGE_LIGHT");
-          String sequence = extractValue(receivedMessage, "SEQUENCE");
-          String stage = extractValue(receivedMessage, "MOVEMENT_STATE");
-
-          String statusLog = "STATUS: Mode=" + mode + ", Bridge=" + bridgeState + ", Gate=" + gateState +
-              ", Road=" + roadLight + ", Boat=" + boatLight + ", BLight=" + bridgeLight +
-              ", Seq=" + sequence + ", Stage=" + stage;
-
-          // Add override-specific info if present
-          String queue = extractValue(receivedMessage, "QUEUE");
-          String executing = extractValue(receivedMessage, "EXECUTING");
-          if (!queue.equals("UNKNOWN")) {
-            statusLog += ", Queue=" + queue + ", Exec=" + executing;
+        }
+        // Handle SYSTEM_UPDATE messages
+        else if (receivedMessage.startsWith("SYSTEM_UPDATE:") || receivedMessage.startsWith("SYSTEM_UPDATE :")) {
+          int colonIndex = receivedMessage.indexOf(":");
+          if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
+            String message = receivedMessage.substring(colonIndex + 1).trim();
+            userInterface.updateMessageLog("⚠ System: " + message);
           }
-
-          userInterface.updateMessageLog(statusLog);
-
-        } else if (receivedMessage.startsWith("COMMAND_EXECUTION - ")) {
-          String command = receivedMessage.substring(20);
-          userInterface.updateMessageLog("✓ Executed: " + command);
-
-        } else if (receivedMessage.startsWith("SYSTEM_UPDATE - ")) {
-          String message = receivedMessage.substring(16);
-          userInterface.updateMessageLog("⚠ System: " + message);
-
-        } else {
-          // Handle other messages (command confirmations, etc.)
+        }
+        // Handle other messages
+        else {
           userInterface.updateMessageLog("ESP32: " + receivedMessage);
         }
       } catch (IOException e) {
-        System.out.println("Ran into an IOException: " + e);
+        System.out.println("IOException in receive: " + e.getMessage());
         if (userInterface != null) {
           userInterface.updateMessageLog("Network error: " + e.getMessage());
         }
+      } catch (Exception e) {
+        System.out.println("Unexpected error in receive: " + e.getMessage());
+        e.printStackTrace();
       }
     }
   }
 
   private void parseStatusMessage(String statusMessage) {
     try {
-      // Parse status message format:
-      // STATUS|MODE:AUTOMATIC|BRIDGE:CLOSED|GATE:OPEN|ROAD_DISTANCE:0
-      // |BOAT_DISTANCE:0|ROAD_LIGHT:RED|BOAT_LIGHT:RED|SEQUENCE:IDLE
-      String[] parts = statusMessage.split("\\|");
+      System.out.println("DEBUG: Parsing status message: " + statusMessage);
+
+      // Find where the actual data starts (after "STATUS:" or "STATUS :")
+      int dataStart = statusMessage.indexOf("MODE:");
+      if (dataStart == -1) {
+        System.out.println("ERROR: Could not find MODE: in status message");
+        return;
+      }
+
+      // Extract the data portion
+      String data = statusMessage.substring(dataStart);
+      System.out.println("DEBUG: Data portion: " + data);
+
+      String[] parts = data.split("\\|");
+      System.out.println("DEBUG: Split into " + parts.length + " parts");
 
       String mode = "UNKNOWN";
       String bridgeState = "UNKNOWN";
@@ -121,51 +105,63 @@ public class Receive extends Thread {
       String bridgeLight = "OFF";
 
       for (String part : parts) {
-        // Handle first part which includes "STATUS - MODE:..."
-        if (part.contains("MODE:")) {
-          int modeIndex = part.indexOf("MODE:");
-          mode = part.substring(modeIndex + 5);
-        } else if (part.startsWith("BRIDGE:")) {
-          bridgeState = part.substring(7);
-        } else if (part.startsWith("GATE:")) {
-          gateState = part.substring(5);
-        } else if (part.startsWith("ROAD_DISTANCE:")) {
-          roadDistance = part.substring(14);
-        } else if (part.startsWith("BOAT_DISTANCE:")) {
-          boatDistance = part.substring(14);
-        } else if (part.startsWith("ROAD_LIGHT:")) {
-          roadLight = part.substring(11);
-        } else if (part.startsWith("BOAT_LIGHT:")) {
-          boatLight = part.substring(11);
-        } else if (part.startsWith("BRIDGE_LIGHT:")) {
-          bridgeLight = part.substring(13);
+        part = part.trim();
+        if (part.isEmpty())
+          continue;
+
+        int colonIndex = part.indexOf(":");
+        if (colonIndex == -1)
+          continue;
+
+        String key = part.substring(0, colonIndex).trim();
+        String value = part.substring(colonIndex + 1).trim();
+
+        System.out.println("DEBUG: Key=" + key + ", Value=" + value);
+
+        switch (key) {
+          case "MODE":
+            mode = value;
+            break;
+          case "BRIDGE":
+            bridgeState = value;
+            break;
+          case "GATE":
+            gateState = value;
+            break;
+          case "ROAD_DISTANCE":
+            roadDistance = value;
+            break;
+          case "BOAT_DISTANCE":
+            boatDistance = value;
+            break;
+          case "ROAD_LIGHT":
+            roadLight = value;
+            break;
+          case "BOAT_LIGHT":
+            boatLight = value;
+            break;
+          case "BRIDGE_LIGHT":
+            bridgeLight = value;
+            break;
         }
       }
+
+      System.out.println("DEBUG: Parsed values - Mode:" + mode + " Bridge:" + bridgeState +
+          " Gate:" + gateState + " RoadLight:" + roadLight + " BoatLight:" + boatLight);
 
       // Update GUI with parsed status
       userInterface.updateSystemStatus(
           mode, bridgeState, gateState, roadDistance, boatDistance, roadLight, boatLight, bridgeLight);
 
+      // Log abbreviated status
+      String statusLog = String.format("STATUS: Bridge=%s Gate=%s RoadLight=%s BoatLight=%s BridgeLight=%s",
+          bridgeState, gateState, roadLight, boatLight, bridgeLight);
+      userInterface.updateMessageLog(statusLog);
+
     } catch (Exception e) {
-      System.out.println("Error parsing status message: " + e.getMessage());
+      System.out.println("ERROR parsing status message: " + e.getMessage());
+      e.printStackTrace();
       userInterface.updateMessageLog("Error parsing status: " + statusMessage);
     }
-  }
-
-  // Helper method to extract values from status message
-  private String extractValue(String message, String key) {
-    try {
-      String[] parts = message.split("\\|");
-      for (String part : parts) {
-        // Use contains for MODE since it has "STATUS - " prefix
-        if (part.contains(key + ":")) {
-          int keyIndex = part.indexOf(key + ":");
-          return part.substring(keyIndex + key.length() + 1);
-        }
-      }
-    } catch (Exception e) {
-      System.out.println("Error extracting value for key: " + key + " - " + e.getMessage());
-    }
-    return "UNKNOWN";
   }
 }
