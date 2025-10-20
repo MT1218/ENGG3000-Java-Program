@@ -26,6 +26,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
+import javax.swing.OverlayLayout;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.text.BadLocationException;
@@ -41,13 +42,17 @@ public class Gui {
   private JButton overrideModeButton;
   private JButton automaticModeButton;
   private JPanel controlPanel;
+  private JPanel overlayPanel;
   private boolean isOverrideMode = false;
+  private boolean communicationLost = false;
 
   // Status Display Components in top bar
   private JLabel bridgeStatusLabel;
   private JLabel gateStatusLabel;
   private JLabel roadDistanceLabel;
   private JLabel boatDistanceLabel;
+  private JLabel sequenceStateLabel;
+  private JLabel queueStatusLabel;
   private JTextPane messageLogArea;
 
   // Send object reference
@@ -59,14 +64,48 @@ public class Gui {
   private String gateState = "OPEN";
   private String roadLight = "RED";
   private String boatLight = "RED";
+  private String sequenceState = "IDLE";
+  private long lastStatusTime = 0;
+
+  // Communication timeout timer
+  private Timer communicationCheckTimer;
 
   public Gui() {
     SwingUtilities.invokeLater(() -> createGUI());
+    startCommunicationMonitor();
   }
 
   public void initializeSender(Send sendObject) {
     this.mcpSendObject = sendObject;
     updateMessageLog("Send object initialized - ready for communication");
+  }
+
+  private void startCommunicationMonitor() {
+    communicationCheckTimer = new Timer(1000, e -> {
+      long timeSinceLastStatus = System.currentTimeMillis() - lastStatusTime;
+      if (timeSinceLastStatus > 5000 && lastStatusTime > 0) {
+        if (!communicationLost) {
+          communicationLost = true;
+          updateCommunicationStatus(false);
+          updateMessageLog("WARNING: Communication lost - No status received for 5 seconds");
+        }
+      } else if (communicationLost && timeSinceLastStatus <= 5000) {
+        communicationLost = false;
+        updateCommunicationStatus(true);
+        updateMessageLog("SYSTEM: Communication restored");
+      }
+    });
+    communicationCheckTimer.start();
+  }
+
+  private void updateCommunicationStatus(boolean connected) {
+    SwingUtilities.invokeLater(() -> {
+      if (connected) {
+        overlayPanel.setVisible(false);
+      } else {
+        overlayPanel.setVisible(true);
+      }
+    });
   }
 
   private void createGUI() {
@@ -121,11 +160,17 @@ public class Gui {
     gateStatusLabel = createTopStatusLabel("Gate: OPEN");
     leftPanel.add(gateStatusLabel);
 
+    sequenceStateLabel = createTopStatusLabel("State: IDLE");
+    leftPanel.add(sequenceStateLabel);
+
     roadDistanceLabel = createTopStatusLabel("Road: 0 cm");
     leftPanel.add(roadDistanceLabel);
 
     boatDistanceLabel = createTopStatusLabel("Boat: 0 cm");
     leftPanel.add(boatDistanceLabel);
+
+    queueStatusLabel = createTopStatusLabel("");
+    leftPanel.add(queueStatusLabel);
 
     // Right side - mode buttons
     JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
@@ -153,9 +198,6 @@ public class Gui {
       if (mcpSendObject != null) {
         mcpSendObject.sendMessage("automatic_mode");
         updateMessageLog("SENT: automatic_mode");
-        isOverrideMode = false;
-        updateModeDisplay();
-        toggleControlPanel(false);
       } else {
         updateMessageLog("ERROR: Send object not initialized");
       }
@@ -168,9 +210,6 @@ public class Gui {
       if (mcpSendObject != null) {
         mcpSendObject.sendMessage("override_mode");
         updateMessageLog("SENT: override_mode");
-        isOverrideMode = true;
-        updateModeDisplay();
-        toggleControlPanel(true);
       } else {
         updateMessageLog("ERROR: Send object not initialized");
       }
@@ -242,7 +281,28 @@ public class Gui {
     bridgePanel = new BridgeAnimationPanel();
     bridgePanel.setPreferredSize(new Dimension(1000, 700));
 
-    centerPanel.add(bridgePanel, BorderLayout.CENTER);
+    // Create overlay panel for communication loss
+    overlayPanel = new JPanel(new BorderLayout());
+    overlayPanel.setBackground(new Color(50, 50, 50, 200));
+    overlayPanel.setVisible(false);
+
+    JLabel overlayLabel = new JLabel("COMMUNICATION LOST", JLabel.CENTER);
+    overlayLabel.setFont(new Font("Arial", Font.BOLD, 48));
+    overlayLabel.setForeground(new Color(231, 76, 60));
+    overlayPanel.add(overlayLabel, BorderLayout.CENTER);
+
+    JLabel overlaySubLabel = new JLabel("Waiting for ESP32 connection...", JLabel.CENTER);
+    overlaySubLabel.setFont(new Font("Arial", Font.PLAIN, 24));
+    overlaySubLabel.setForeground(Color.WHITE);
+    overlayPanel.add(overlaySubLabel, BorderLayout.SOUTH);
+
+    // Layer the panels
+    JPanel layeredPanel = new JPanel();
+    layeredPanel.setLayout(new OverlayLayout(layeredPanel));
+    layeredPanel.add(overlayPanel);
+    layeredPanel.add(bridgePanel);
+
+    centerPanel.add(layeredPanel, BorderLayout.CENTER);
     return centerPanel;
   }
 
@@ -279,31 +339,27 @@ public class Gui {
     addControlButton(panel, "ALLOW BOAT TRAFFIC", new Color(41, 128, 185), "allow_boat_traffic", gbc, 1, null);
     addControlButton(panel, "ALLOW ROAD TRAFFIC", new Color(41, 128, 185), "allow_road_traffic", gbc, 2, null);
 
-    // Bridge Control Section
-    addSectionLabel(panel, "BRIDGE CONTROL", gbc, 3);
-    addControlButton(panel, "OPEN BRIDGE", new Color(52, 73, 94), "open_bridge", gbc, 4, "OPEN");
-    addControlButton(panel, "CLOSE BRIDGE", new Color(52, 73, 94), "close_bridge", gbc, 5, "CLOSED");
-
-    // Gate Control Section
-    addSectionLabel(panel, "GATE CONTROL", gbc, 6);
-    addControlButton(panel, "OPEN GATE", new Color(52, 73, 94), "open_gate", gbc, 7, "OPEN");
-    addControlButton(panel, "CLOSE GATE", new Color(52, 73, 94), "close_gate", gbc, 8, "CLOSED");
+    // System Test Section
+    addSectionLabel(panel, "SYSTEM TESTING", gbc, 3);
+    addControlButton(panel, "RUN FULL TEST", new Color(155, 89, 182), "run_full_test", gbc, 4, null);
+    addControlButton(panel, "PERFORM DIAGNOSTICS", new Color(230, 126, 34), "perform_diagnostics", gbc, 5, null);
+    addControlButton(panel, "RESTART ESP32", new Color(192, 57, 43), "restart", gbc, 6, null);
 
     // Road Light Control Section
-    addSectionLabel(panel, "ROAD LIGHTS", gbc, 9);
-    addControlButton(panel, "RED", new Color(231, 76, 60), "road_lights_red", gbc, 10, null);
-    addControlButton(panel, "YELLOW", new Color(241, 196, 15), "road_lights_yellow", gbc, 11, null);
-    addControlButton(panel, "GREEN", new Color(46, 204, 113), "road_lights_green", gbc, 12, null);
+    addSectionLabel(panel, "ROAD LIGHTS", gbc, 7);
+    addControlButton(panel, "RED", new Color(231, 76, 60), "road_lights_red", gbc, 8, null);
+    addControlButton(panel, "YELLOW", new Color(241, 196, 15), "road_lights_yellow", gbc, 9, null);
+    addControlButton(panel, "GREEN", new Color(46, 204, 113), "road_lights_green", gbc, 10, null);
 
     // Boat Light Control Section
-    addSectionLabel(panel, "BOAT LIGHTS", gbc, 13);
-    addControlButton(panel, "RED", new Color(231, 76, 60), "boat_lights_red", gbc, 14, null);
-    addControlButton(panel, "GREEN", new Color(46, 204, 113), "boat_lights_green", gbc, 15, null);
+    addSectionLabel(panel, "BOAT LIGHTS", gbc, 11);
+    addControlButton(panel, "RED", new Color(231, 76, 60), "boat_lights_red", gbc, 12, null);
+    addControlButton(panel, "GREEN", new Color(46, 204, 113), "boat_lights_green", gbc, 13, null);
 
     // Bridge Lights Control Section
-    addSectionLabel(panel, "BRIDGE LIGHTS", gbc, 16);
+    addSectionLabel(panel, "BRIDGE LIGHTS", gbc, 14);
 
-    gbc.gridy = 17;
+    gbc.gridy = 15;
     JCheckBox manualControlCheckbox = new JCheckBox("Manual Control");
     manualControlCheckbox.setFont(new Font("Arial", Font.PLAIN, 12));
     manualControlCheckbox.setBackground(new Color(236, 240, 241));
@@ -321,8 +377,8 @@ public class Gui {
     manualControlCheckbox.setEnabled(false);
     panel.add(manualControlCheckbox, gbc);
 
-    addControlButton(panel, "LIGHTS ON", new Color(255, 193, 7), "manual_bridge_lights_on", gbc, 18, null);
-    addControlButton(panel, "LIGHTS OFF", new Color(158, 158, 158), "manual_bridge_lights_off", gbc, 19, null);
+    addControlButton(panel, "LIGHTS ON", new Color(255, 193, 7), "manual_bridge_lights_on", gbc, 16, null);
+    addControlButton(panel, "LIGHTS OFF", new Color(158, 158, 158), "manual_bridge_lights_off", gbc, 17, null);
 
     // Initially disable all buttons
     Component[] components = panel.getComponents();
@@ -505,13 +561,18 @@ public class Gui {
 
   public void updateSystemStatus(String mode, String bridgeState, String gateState,
       String roadDistance, String boatDistance,
-      String roadLight, String boatLight, String bridgeLight) {
+      String roadLight, String boatLight, String bridgeLight,
+      String sequenceState, String movementState,
+      String queueSize, String executing) {
     SwingUtilities.invokeLater(() -> {
+      lastStatusTime = System.currentTimeMillis();
+
       this.currentMode = mode;
       this.bridgeState = bridgeState;
       this.gateState = gateState;
       this.roadLight = roadLight;
       this.boatLight = boatLight;
+      this.sequenceState = sequenceState;
 
       // Update bridge status with color coding
       bridgeStatusLabel.setText("Bridge: " + bridgeState);
@@ -533,9 +594,34 @@ public class Gui {
         gateStatusLabel.setForeground(Color.LIGHT_GRAY);
       }
 
+      // Update sequence state
+      sequenceStateLabel.setText("State: " + sequenceState);
+      if (sequenceState.equals("DIAGNOSTIC")) {
+        sequenceStateLabel.setForeground(new Color(231, 76, 60));
+      } else if (sequenceState.equals("IDLE") || sequenceState.equals("CARS_PASSING")
+          || sequenceState.equals("BOATS_PASSING")) {
+        sequenceStateLabel.setForeground(new Color(46, 204, 113));
+      } else {
+        sequenceStateLabel.setForeground(new Color(241, 196, 15));
+      }
+
       // Update distances
       roadDistanceLabel.setText("Road: " + roadDistance + " cm");
       boatDistanceLabel.setText("Boat: " + boatDistance + " cm");
+
+      // Update queue status if in override mode
+      if (mode.equals("OVERRIDE") && queueSize != null && !queueSize.isEmpty()) {
+        String queueText = "Queue: " + queueSize;
+        if (executing != null && executing.equals("YES")) {
+          queueText += " (Executing)";
+          queueStatusLabel.setForeground(new Color(241, 196, 15));
+        } else {
+          queueStatusLabel.setForeground(Color.WHITE);
+        }
+        queueStatusLabel.setText(queueText);
+      } else {
+        queueStatusLabel.setText("");
+      }
 
       // Update mode if it has changed from ESP32
       if (!mode.equals("UNKNOWN")) {
@@ -573,10 +659,22 @@ public class Gui {
           StyleConstants.setForeground(whiteStyle, Color.WHITE);
           doc.setCharacterAttributes(0, doc.getLength(), whiteStyle, false);
 
-          // Insert new message at the top with green color
-          Style greenStyle = messageLogArea.addStyle("Green", null);
-          StyleConstants.setForeground(greenStyle, new Color(46, 204, 113));
-          doc.insertString(0, newMessage, greenStyle);
+          // Determine color based on message type
+          Style messageStyle = messageLogArea.addStyle("MessageStyle", null);
+          if (message.startsWith("ERROR") || message.startsWith("SYSTEM: communication_lost")) {
+            StyleConstants.setForeground(messageStyle, new Color(231, 76, 60));
+          } else if (message.startsWith("WARNING")) {
+            StyleConstants.setForeground(messageStyle, new Color(241, 196, 15));
+          } else if (message.startsWith("EXECUTED") || message.startsWith("MODE CHANGE")
+              || message.startsWith("SYSTEM: communication_connected")) {
+            StyleConstants.setForeground(messageStyle, new Color(46, 204, 113));
+          } else if (message.startsWith("INFO") || message.startsWith("SENT")) {
+            StyleConstants.setForeground(messageStyle, new Color(52, 152, 219));
+          } else {
+            StyleConstants.setForeground(messageStyle, new Color(149, 165, 166));
+          }
+
+          doc.insertString(0, newMessage, messageStyle);
 
           // Keep scroll at top
           messageLogArea.setCaretPosition(0);

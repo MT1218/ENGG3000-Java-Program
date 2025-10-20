@@ -53,12 +53,53 @@ public class Receive extends Thread {
         if (receivedMessage.startsWith("STATUS:") || receivedMessage.startsWith("STATUS :")) {
           parseStatusMessage(receivedMessage);
         }
+        // Handle MODE_CHANGE messages
+        else if (receivedMessage.startsWith("MODE_CHANGE:") || receivedMessage.startsWith("MODE_CHANGE :")) {
+          int colonIndex = receivedMessage.indexOf(":");
+          if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
+            String message = receivedMessage.substring(colonIndex + 1).trim();
+            userInterface.updateMessageLog("MODE CHANGE: " + message);
+          }
+        }
+        // Handle INFO messages
+        else if (receivedMessage.startsWith("INFO:") || receivedMessage.startsWith("INFO :")) {
+          int colonIndex = receivedMessage.indexOf(":");
+          if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
+            String message = receivedMessage.substring(colonIndex + 1).trim();
+            userInterface.updateMessageLog("INFO: " + message);
+          }
+        }
+        // Handle WARNING messages
+        else if (receivedMessage.startsWith("WARNING:") || receivedMessage.startsWith("WARNING :")) {
+          int colonIndex = receivedMessage.indexOf(":");
+          if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
+            String message = receivedMessage.substring(colonIndex + 1).trim();
+            userInterface.updateMessageLog("WARNING: " + message);
+          }
+        }
+        // Handle ERROR messages
+        else if (receivedMessage.startsWith("ERROR:") || receivedMessage.startsWith("ERROR :")) {
+          int colonIndex = receivedMessage.indexOf(":");
+          if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
+            String message = receivedMessage.substring(colonIndex + 1).trim();
+            userInterface.updateMessageLog("ERROR: " + message);
+          }
+        }
+        // Handle COMMAND_EXECUTION messages
+        else if (receivedMessage.startsWith("COMMAND_EXECUTION:")
+            || receivedMessage.startsWith("COMMAND_EXECUTION :")) {
+          int colonIndex = receivedMessage.indexOf(":");
+          if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
+            String message = receivedMessage.substring(colonIndex + 1).trim();
+            userInterface.updateMessageLog("EXECUTED: " + message);
+          }
+        }
         // Handle SYSTEM_UPDATE messages
         else if (receivedMessage.startsWith("SYSTEM_UPDATE:") || receivedMessage.startsWith("SYSTEM_UPDATE :")) {
           int colonIndex = receivedMessage.indexOf(":");
           if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
             String message = receivedMessage.substring(colonIndex + 1).trim();
-            userInterface.updateMessageLog("⚠ System: " + message);
+            userInterface.updateMessageLog("SYSTEM: " + message);
           }
         }
         // Handle other messages
@@ -103,6 +144,10 @@ public class Receive extends Thread {
       String roadLight = "UNKNOWN";
       String boatLight = "UNKNOWN";
       String bridgeLight = "OFF";
+      String sequenceState = "UNKNOWN";
+      String movementState = "UNKNOWN";
+      String queueSize = "";
+      String executing = "";
 
       for (String part : parts) {
         part = part.trim();
@@ -143,20 +188,32 @@ public class Receive extends Thread {
           case "BRIDGE_LIGHT":
             bridgeLight = value;
             break;
+          case "SEQUENCE":
+            sequenceState = value;
+            break;
+          case "MOVEMENT_STATE":
+            movementState = value;
+            break;
+          case "QUEUE":
+            queueSize = value;
+            break;
+          case "EXECUTING":
+            executing = value;
+            break;
         }
       }
 
       System.out.println("DEBUG: Parsed values - Mode:" + mode + " Bridge:" + bridgeState +
-          " Gate:" + gateState + " RoadLight:" + roadLight + " BoatLight:" + boatLight);
+          " Gate:" + gateState + " RoadLight:" + roadLight + " BoatLight:" + boatLight +
+          " Sequence:" + sequenceState + " Movement:" + movementState);
 
       // Update GUI with parsed status
       userInterface.updateSystemStatus(
-          mode, bridgeState, gateState, roadDistance, boatDistance, roadLight, boatLight, bridgeLight);
+          mode, bridgeState, gateState, roadDistance, boatDistance, roadLight, boatLight, bridgeLight,
+          sequenceState, movementState, queueSize, executing);
 
-      // Log abbreviated status
-      String statusLog = String.format("STATUS: Bridge=%s Gate=%s RoadLight=%s BoatLight=%s BridgeLight=%s",
-          bridgeState, gateState, roadLight, boatLight, bridgeLight);
-      userInterface.updateMessageLog(statusLog);
+      // Log full status message
+      userInterface.updateMessageLog("STATUS: " + statusMessage);
 
     } catch (Exception e) {
       System.out.println("ERROR parsing status message: " + e.getMessage());
