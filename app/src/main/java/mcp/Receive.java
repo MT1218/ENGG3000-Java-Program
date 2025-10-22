@@ -53,6 +53,15 @@ public class Receive extends Thread {
         if (receivedMessage.startsWith("STATUS:") || receivedMessage.startsWith("STATUS :")) {
           parseStatusMessage(receivedMessage);
         }
+        // Handle WEIGHT_CHECK messages
+        else if (receivedMessage.startsWith("WEIGHT_CHECK:") || receivedMessage.startsWith("WEIGHT_CHECK :")) {
+          int colonIndex = receivedMessage.indexOf(":");
+          if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
+            String weight = receivedMessage.substring(colonIndex + 1).trim();
+            userInterface.updateWeightReading(weight);
+            userInterface.updateMessageLog("WEIGHT CHECK: " + weight);
+          }
+        }
         // Handle MODE_CHANGE messages
         else if (receivedMessage.startsWith("MODE_CHANGE:") || receivedMessage.startsWith("MODE_CHANGE :")) {
           int colonIndex = receivedMessage.indexOf(":");
@@ -141,9 +150,12 @@ public class Receive extends Thread {
       String gateState = "UNKNOWN";
       String roadDistance = "0";
       String boatDistance = "0";
+      String bridgeMovementDistance = "0";
+      String boatClearanceDistance = "0";
       String roadLight = "UNKNOWN";
       String boatLight = "UNKNOWN";
       String bridgeLight = "OFF";
+      String manualBridgeLights = "NO";
       String sequenceState = "UNKNOWN";
       String movementState = "UNKNOWN";
       String queueSize = "";
@@ -179,6 +191,12 @@ public class Receive extends Thread {
           case "BOAT_DISTANCE":
             boatDistance = value;
             break;
+          case "BRIDGE_MOVEMENT_DISTANCE":
+            bridgeMovementDistance = value;
+            break;
+          case "BOAT_CLEARANCE_DISTANCE":
+            boatClearanceDistance = value;
+            break;
           case "ROAD_LIGHT":
             roadLight = value;
             break;
@@ -187,6 +205,9 @@ public class Receive extends Thread {
             break;
           case "BRIDGE_LIGHT":
             bridgeLight = value;
+            break;
+          case "MANUAL_BRIDGE_LIGHTS":
+            manualBridgeLights = value;
             break;
           case "SEQUENCE":
             sequenceState = value;
@@ -209,11 +230,12 @@ public class Receive extends Thread {
 
       // Update GUI with parsed status
       userInterface.updateSystemStatus(
-          mode, bridgeState, gateState, roadDistance, boatDistance, roadLight, boatLight, bridgeLight,
-          sequenceState, movementState, queueSize, executing);
+          mode, bridgeState, gateState, roadDistance, boatDistance,
+          bridgeMovementDistance, boatClearanceDistance, roadLight, boatLight,
+          bridgeLight, manualBridgeLights, sequenceState, movementState, queueSize, executing);
 
-      // Log full status message
-      userInterface.updateMessageLog("STATUS: " + statusMessage);
+      // Don't log full status message to reduce clutter - it's shown in the stats
+      // panel
 
     } catch (Exception e) {
       System.out.println("ERROR parsing status message: " + e.getMessage());

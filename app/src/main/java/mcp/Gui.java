@@ -14,12 +14,23 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.RenderingHints;
+import java.awt.Toolkit;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.geom.AffineTransform;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JDialog;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -38,22 +49,31 @@ public class Gui {
   // GUI Components
   private JFrame frame;
   private BridgeAnimationPanel bridgePanel;
-  private JLabel statusLabel;
-  private JButton overrideModeButton;
-  private JButton automaticModeButton;
   private JPanel controlPanel;
+  private JPanel modeControlPanel;
   private JPanel overlayPanel;
+  private JPanel warningPanel;
   private boolean isOverrideMode = false;
   private boolean communicationLost = false;
+  private boolean isDiagnosticMode = false;
 
-  // Status Display Components in top bar
+  // Status Display Components
+  private JLabel modeLabel;
   private JLabel bridgeStatusLabel;
   private JLabel gateStatusLabel;
   private JLabel roadDistanceLabel;
   private JLabel boatDistanceLabel;
+  private JLabel bridgeMovementLabel;
+  private JLabel boatClearanceLabel;
   private JLabel sequenceStateLabel;
   private JLabel queueStatusLabel;
+  private JLabel manualLightsLabel;
+  private JLabel lastWeightLabel;
   private JTextPane messageLogArea;
+
+  // Mode control buttons
+  private JButton overrideModeButton;
+  private JButton automaticModeButton;
 
   // Send object reference
   private Send mcpSendObject;
@@ -66,9 +86,15 @@ public class Gui {
   private String boatLight = "RED";
   private String sequenceState = "IDLE";
   private long lastStatusTime = 0;
+  private String lastWeightReading = "N/A";
 
   // Communication timeout timer
   private Timer communicationCheckTimer;
+  private Timer warningFlashTimer;
+  private boolean warningVisible = true;
+
+  // Responsive sizing
+  private boolean isLaptopSize = false;
 
   public Gui() {
     SwingUtilities.invokeLater(() -> createGUI());
@@ -96,14 +122,21 @@ public class Gui {
       }
     });
     communicationCheckTimer.start();
+
+    // Warning flash timer - slower flash (1 second interval)
+    warningFlashTimer = new Timer(1000, e -> {
+      if (communicationLost) {
+        warningVisible = !warningVisible;
+        warningPanel.setVisible(warningVisible);
+      }
+    });
+    warningFlashTimer.start();
   }
 
   private void updateCommunicationStatus(boolean connected) {
     SwingUtilities.invokeLater(() -> {
       if (connected) {
-        overlayPanel.setVisible(false);
-      } else {
-        overlayPanel.setVisible(true);
+        warningPanel.setVisible(false);
       }
     });
   }
@@ -112,20 +145,44 @@ public class Gui {
     System.out.println("Creating GUI window...");
 
     frame = new JFrame("Bridge Control Interface");
-    frame.setSize(1600, 1000);
+
+    // Check screen size and set appropriate dimensions
+    Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+    int screenWidth = screenSize.width;
+    int screenHeight = screenSize.height;
+
+    // Determine if laptop size (width < 1600)
+    isLaptopSize = screenWidth < 1600;
+
+    if (isLaptopSize) {
+      frame.setSize(screenWidth - 100, screenHeight - 100);
+    } else {
+      frame.setSize(1600, 1000);
+      frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
+    }
+
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     frame.setLayout(new BorderLayout(10, 10));
-    frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
 
-    JPanel topPanel = createTopPanel();
-    JPanel centerPanel = createCenterPanel();
+    // Create main center area with left stats panel
+    JPanel centerArea = new JPanel(new BorderLayout(10, 10));
+    centerArea.add(createStatsPanel(), BorderLayout.WEST);
+    centerArea.add(createCenterPanel(), BorderLayout.CENTER);
+
     JPanel rightPanel = createRightPanel();
     JPanel bottomPanel = createLogPanel();
 
-    frame.add(topPanel, BorderLayout.NORTH);
-    frame.add(centerPanel, BorderLayout.CENTER);
+    frame.add(centerArea, BorderLayout.CENTER);
     frame.add(rightPanel, BorderLayout.EAST);
     frame.add(bottomPanel, BorderLayout.SOUTH);
+
+    // Add resize listener for responsiveness
+    frame.addComponentListener(new ComponentAdapter() {
+      @Override
+      public void componentResized(ComponentEvent e) {
+        handleResize();
+      }
+    });
 
     frame.setLocationRelativeTo(null);
     frame.setVisible(true);
@@ -133,144 +190,109 @@ public class Gui {
     System.out.println("GUI window should now be visible");
   }
 
-  private JPanel createTopPanel() {
-    JPanel topPanel = new JPanel(new BorderLayout());
-    topPanel.setBackground(new Color(44, 62, 80));
-    topPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
+  private void handleResize() {
+    int width = frame.getWidth();
+    boolean wasLaptopSize = isLaptopSize;
+    isLaptopSize = width < 1600;
 
-    // Left side - mode status
-    JPanel leftPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
-    leftPanel.setBackground(new Color(44, 62, 80));
-
-    statusLabel = new JLabel("Current Mode: AUTOMATIC");
-    statusLabel.setFont(new Font("Arial", Font.BOLD, 18));
-    statusLabel.setForeground(Color.WHITE);
-    leftPanel.add(statusLabel);
-
-    // Add separator
-    JLabel separator1 = new JLabel(" | ");
-    separator1.setFont(new Font("Arial", Font.BOLD, 18));
-    separator1.setForeground(new Color(149, 165, 166));
-    leftPanel.add(separator1);
-
-    // System status labels
-    bridgeStatusLabel = createTopStatusLabel("Bridge: CLOSED");
-    leftPanel.add(bridgeStatusLabel);
-
-    gateStatusLabel = createTopStatusLabel("Gate: OPEN");
-    leftPanel.add(gateStatusLabel);
-
-    sequenceStateLabel = createTopStatusLabel("State: IDLE");
-    leftPanel.add(sequenceStateLabel);
-
-    roadDistanceLabel = createTopStatusLabel("Road: 0 cm");
-    leftPanel.add(roadDistanceLabel);
-
-    boatDistanceLabel = createTopStatusLabel("Boat: 0 cm");
-    leftPanel.add(boatDistanceLabel);
-
-    queueStatusLabel = createTopStatusLabel("");
-    leftPanel.add(queueStatusLabel);
-
-    // Right side - mode buttons
-    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-    buttonPanel.setBackground(new Color(44, 62, 80));
-
-    automaticModeButton = new JButton("Switch to Automatic Mode");
-    automaticModeButton.setBackground(new Color(46, 204, 113, 128));
-    automaticModeButton.setForeground(Color.WHITE);
-    automaticModeButton.setFont(new Font("Arial", Font.BOLD, 16));
-    automaticModeButton.setFocusPainted(false);
-    automaticModeButton.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-
-    overrideModeButton = new JButton("Switch to Override Mode");
-    overrideModeButton.setBackground(new Color(231, 76, 60));
-    overrideModeButton.setForeground(Color.WHITE);
-    overrideModeButton.setFont(new Font("Arial", Font.BOLD, 16));
-    overrideModeButton.setFocusPainted(false);
-    overrideModeButton.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-
-    // Mode switching logic
-    automaticModeButton.addActionListener(e -> {
-      if (!isOverrideMode) {
-        return;
-      }
-      if (mcpSendObject != null) {
-        mcpSendObject.sendMessage("automatic_mode");
-        updateMessageLog("SENT: automatic_mode");
-      } else {
-        updateMessageLog("ERROR: Send object not initialized");
-      }
-    });
-
-    overrideModeButton.addActionListener(e -> {
-      if (isOverrideMode) {
-        return;
-      }
-      if (mcpSendObject != null) {
-        mcpSendObject.sendMessage("override_mode");
-        updateMessageLog("SENT: override_mode");
-      } else {
-        updateMessageLog("ERROR: Send object not initialized");
-      }
-    });
-
-    // Hover effects
-    automaticModeButton.addMouseListener(new java.awt.event.MouseAdapter() {
-      public void mouseEntered(java.awt.event.MouseEvent evt) {
-        if (!isOverrideMode)
-          return;
-        automaticModeButton.setBackground(new Color(52, 231, 128));
-        automaticModeButton.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.WHITE, 2),
-            BorderFactory.createEmptyBorder(8, 18, 8, 18)));
-      }
-
-      public void mouseExited(java.awt.event.MouseEvent evt) {
-        if (!isOverrideMode) {
-          automaticModeButton.setBackground(new Color(46, 204, 113, 128));
-        } else {
-          automaticModeButton.setBackground(new Color(46, 204, 113));
-        }
-        automaticModeButton.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-      }
-    });
-
-    overrideModeButton.addMouseListener(new java.awt.event.MouseAdapter() {
-      public void mouseEntered(java.awt.event.MouseEvent evt) {
-        if (isOverrideMode)
-          return;
-        overrideModeButton.setBackground(new Color(243, 104, 88));
-        overrideModeButton.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.WHITE, 2),
-            BorderFactory.createEmptyBorder(8, 18, 8, 18)));
-      }
-
-      public void mouseExited(java.awt.event.MouseEvent evt) {
-        if (isOverrideMode) {
-          overrideModeButton.setBackground(new Color(231, 76, 60, 128));
-        } else {
-          overrideModeButton.setBackground(new Color(231, 76, 60));
-        }
-        overrideModeButton.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-      }
-    });
-
-    buttonPanel.add(automaticModeButton);
-    buttonPanel.add(Box.createHorizontalStrut(10));
-    buttonPanel.add(overrideModeButton);
-
-    topPanel.add(leftPanel, BorderLayout.WEST);
-    topPanel.add(buttonPanel, BorderLayout.EAST);
-
-    return topPanel;
+    if (wasLaptopSize != isLaptopSize) {
+      // Adjust font sizes and component sizes if needed
+      SwingUtilities.invokeLater(() -> {
+        adjustComponentSizes();
+        frame.revalidate();
+        frame.repaint();
+      });
+    }
   }
 
-  private JLabel createTopStatusLabel(String text) {
+  private void adjustComponentSizes() {
+    int fontSize = isLaptopSize ? 11 : 13;
+    int buttonHeight = isLaptopSize ? 28 : 32;
+
+    Font labelFont = new Font("Arial", Font.PLAIN, fontSize);
+    Font buttonFont = new Font("Arial", Font.BOLD, fontSize);
+
+    // Update all labels
+    updateFontRecursive(controlPanel, labelFont, buttonFont, buttonHeight);
+    updateFontRecursive(modeControlPanel, labelFont, buttonFont, buttonHeight);
+  }
+
+  private void updateFontRecursive(JPanel panel, Font labelFont, Font buttonFont, int buttonHeight) {
+    for (Component comp : panel.getComponents()) {
+      if (comp instanceof JButton) {
+        comp.setFont(buttonFont);
+        comp.setPreferredSize(new Dimension(comp.getPreferredSize().width, buttonHeight));
+      } else if (comp instanceof JLabel || comp instanceof JCheckBox) {
+        comp.setFont(labelFont);
+      } else if (comp instanceof JPanel) {
+        updateFontRecursive((JPanel) comp, labelFont, buttonFont, buttonHeight);
+      }
+    }
+  }
+
+  private JPanel createStatsPanel() {
+    JPanel statsPanel = new JPanel();
+    statsPanel.setLayout(new BoxLayout(statsPanel, BoxLayout.Y_AXIS));
+    statsPanel.setBackground(new Color(44, 62, 80));
+    statsPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+    int panelWidth = isLaptopSize ? 220 : 250;
+    statsPanel.setPreferredSize(new Dimension(panelWidth, 0));
+
+    // Title
+    JLabel titleLabel = new JLabel("SYSTEM STATUS");
+    titleLabel.setFont(new Font("Arial", Font.BOLD, 15));
+    titleLabel.setForeground(Color.WHITE);
+    titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+    statsPanel.add(titleLabel);
+    statsPanel.add(Box.createVerticalStrut(15));
+
+    // Create all status labels - vertical list
+    modeLabel = createStatLabel("Mode: AUTOMATIC");
+    bridgeStatusLabel = createStatLabel("Bridge: CLOSED");
+    gateStatusLabel = createStatLabel("Gate: OPEN");
+    sequenceStateLabel = createStatLabel("State: IDLE");
+    roadDistanceLabel = createStatLabel("Road: 0 cm");
+    boatDistanceLabel = createStatLabel("Boat: 0 cm");
+    bridgeMovementLabel = createStatLabel("Bridge Sensor: 0 cm");
+    boatClearanceLabel = createStatLabel("Clearance: 0 cm");
+    manualLightsLabel = createStatLabel("Manual Lights: NO");
+    lastWeightLabel = createStatLabel("Last Weight: N/A");
+    queueStatusLabel = createStatLabel("");
+
+    // Add all labels vertically
+    statsPanel.add(modeLabel);
+    statsPanel.add(Box.createVerticalStrut(7));
+    statsPanel.add(bridgeStatusLabel);
+    statsPanel.add(Box.createVerticalStrut(7));
+    statsPanel.add(gateStatusLabel);
+    statsPanel.add(Box.createVerticalStrut(7));
+    statsPanel.add(sequenceStateLabel);
+    statsPanel.add(Box.createVerticalStrut(10));
+    statsPanel.add(roadDistanceLabel);
+    statsPanel.add(Box.createVerticalStrut(7));
+    statsPanel.add(boatDistanceLabel);
+    statsPanel.add(Box.createVerticalStrut(7));
+    statsPanel.add(bridgeMovementLabel);
+    statsPanel.add(Box.createVerticalStrut(7));
+    statsPanel.add(boatClearanceLabel);
+    statsPanel.add(Box.createVerticalStrut(10));
+    statsPanel.add(manualLightsLabel);
+    statsPanel.add(Box.createVerticalStrut(7));
+    statsPanel.add(lastWeightLabel);
+    statsPanel.add(Box.createVerticalStrut(7));
+    statsPanel.add(queueStatusLabel);
+
+    // Add glue to push everything to top
+    statsPanel.add(Box.createVerticalGlue());
+
+    return statsPanel;
+  }
+
+  private JLabel createStatLabel(String text) {
     JLabel label = new JLabel(text);
-    label.setFont(new Font("Arial", Font.PLAIN, 15));
+    label.setFont(new Font("Arial", Font.PLAIN, 13));
     label.setForeground(Color.WHITE);
-    label.setBorder(BorderFactory.createEmptyBorder(0, 15, 0, 15));
+    label.setAlignmentX(Component.LEFT_ALIGNMENT);
     return label;
   }
 
@@ -279,27 +301,45 @@ public class Gui {
     centerPanel.setBackground(new Color(52, 73, 94));
 
     bridgePanel = new BridgeAnimationPanel();
-    bridgePanel.setPreferredSize(new Dimension(1000, 700));
 
-    // Create overlay panel for communication loss
-    overlayPanel = new JPanel(new BorderLayout());
-    overlayPanel.setBackground(new Color(50, 50, 50, 200));
-    overlayPanel.setVisible(false);
+    // Create warning panel for communication loss
+    warningPanel = new JPanel(new BorderLayout());
+    warningPanel.setOpaque(false);
+    warningPanel.setVisible(false);
 
-    JLabel overlayLabel = new JLabel("COMMUNICATION LOST", JLabel.CENTER);
-    overlayLabel.setFont(new Font("Arial", Font.BOLD, 48));
-    overlayLabel.setForeground(new Color(231, 76, 60));
-    overlayPanel.add(overlayLabel, BorderLayout.CENTER);
+    JPanel warningContentPanel = new JPanel();
+    warningContentPanel.setLayout(new BoxLayout(warningContentPanel, BoxLayout.Y_AXIS));
+    warningContentPanel.setBackground(new Color(231, 76, 60, 220));
+    warningContentPanel.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createLineBorder(Color.WHITE, 3),
+        BorderFactory.createEmptyBorder(30, 50, 30, 50)));
 
-    JLabel overlaySubLabel = new JLabel("Waiting for ESP32 connection...", JLabel.CENTER);
-    overlaySubLabel.setFont(new Font("Arial", Font.PLAIN, 24));
-    overlaySubLabel.setForeground(Color.WHITE);
-    overlayPanel.add(overlaySubLabel, BorderLayout.SOUTH);
+    JLabel warningIcon = new JLabel("âš ");
+    warningIcon.setFont(new Font("Arial", Font.BOLD, 72));
+    warningIcon.setForeground(Color.WHITE);
+    warningIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+    JLabel warningLabel = new JLabel("COMMUNICATION LOST");
+    warningLabel.setFont(new Font("Arial", Font.BOLD, 32));
+    warningLabel.setForeground(Color.WHITE);
+    warningLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+    warningContentPanel.add(warningIcon);
+    warningContentPanel.add(Box.createVerticalStrut(10));
+    warningContentPanel.add(warningLabel);
+
+    warningPanel.add(warningContentPanel, BorderLayout.CENTER);
+
+    // Create transparent panel to center the warning
+    JPanel warningCenterPanel = new JPanel(new GridBagLayout());
+    warningCenterPanel.setOpaque(false);
+    warningCenterPanel.add(warningContentPanel);
+    warningPanel.add(warningCenterPanel, BorderLayout.CENTER);
 
     // Layer the panels
     JPanel layeredPanel = new JPanel();
     layeredPanel.setLayout(new OverlayLayout(layeredPanel));
-    layeredPanel.add(overlayPanel);
+    layeredPanel.add(warningPanel);
     layeredPanel.add(bridgePanel);
 
     centerPanel.add(layeredPanel, BorderLayout.CENTER);
@@ -308,14 +348,113 @@ public class Gui {
 
   private JPanel createRightPanel() {
     JPanel rightPanel = new JPanel(new BorderLayout(5, 5));
-    rightPanel.setPreferredSize(new Dimension(500, 0));
+    int panelWidth = isLaptopSize ? 400 : 500;
+    rightPanel.setPreferredSize(new Dimension(panelWidth, 0));
     rightPanel.setBackground(new Color(236, 240, 241));
 
+    // Create main container with vertical layout
+    JPanel mainContainer = new JPanel();
+    mainContainer.setLayout(new BoxLayout(mainContainer, BoxLayout.Y_AXIS));
+    mainContainer.setBackground(new Color(236, 240, 241));
+
+    modeControlPanel = createModeControlPanel();
     controlPanel = createControlPanel();
 
-    rightPanel.add(controlPanel, BorderLayout.CENTER);
+    mainContainer.add(modeControlPanel);
+    mainContainer.add(Box.createVerticalStrut(10));
+    mainContainer.add(controlPanel);
+
+    // Wrap in scroll pane to prevent extending under log
+    JScrollPane scrollPane = new JScrollPane(mainContainer);
+    scrollPane.setBorder(null);
+    scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+    scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+    scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+
+    rightPanel.add(scrollPane, BorderLayout.CENTER);
 
     return rightPanel;
+  }
+
+  private JPanel createModeControlPanel() {
+    JPanel panel = new JPanel(new GridBagLayout());
+    panel.setBorder(BorderFactory.createTitledBorder(
+        BorderFactory.createLineBorder(new Color(52, 73, 94), 2),
+        "Mode Controls",
+        0,
+        0,
+        new Font("Arial", Font.BOLD, 13),
+        new Color(52, 73, 94)));
+    panel.setBackground(new Color(236, 240, 241));
+    panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
+
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(5, 10, 5, 10);
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    gbc.weightx = 1.0;
+    gbc.gridy = 0;
+
+    Color buttonColor = new Color(52, 73, 94);
+    int buttonHeight = isLaptopSize ? 35 : 40;
+
+    automaticModeButton = createModeButton("SWITCH TO AUTOMATIC MODE", buttonColor, buttonHeight);
+    automaticModeButton.addActionListener(e -> {
+      if (!isOverrideMode)
+        return;
+      if (mcpSendObject != null) {
+        mcpSendObject.sendMessage("automatic_mode");
+        updateMessageLog("SENT: automatic_mode");
+      } else {
+        updateMessageLog("ERROR: Send object not initialized");
+      }
+    });
+
+    overrideModeButton = createModeButton("SWITCH TO OVERRIDE MODE", buttonColor, buttonHeight);
+    overrideModeButton.addActionListener(e -> {
+      if (isOverrideMode)
+        return;
+      if (mcpSendObject != null) {
+        mcpSendObject.sendMessage("override_mode");
+        updateMessageLog("SENT: override_mode");
+      } else {
+        updateMessageLog("ERROR: Send object not initialized");
+      }
+    });
+
+    panel.add(automaticModeButton, gbc);
+    gbc.gridy = 1;
+    panel.add(overrideModeButton, gbc);
+
+    return panel;
+  }
+
+  private JButton createModeButton(String text, Color color, int height) {
+    JButton button = new JButton(text);
+    button.setBackground(color);
+    button.setForeground(Color.WHITE);
+    button.setFont(new Font("Arial", Font.BOLD, 13));
+    button.setFocusPainted(false);
+    button.setBorderPainted(false);
+    button.setPreferredSize(new Dimension(170, height));
+    button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+    button.addMouseListener(new java.awt.event.MouseAdapter() {
+      Color originalColor = button.getBackground();
+
+      public void mouseEntered(java.awt.event.MouseEvent evt) {
+        if (button.isEnabled()) {
+          button.setBackground(color.brighter());
+        }
+      }
+
+      public void mouseExited(java.awt.event.MouseEvent evt) {
+        if (button.isEnabled()) {
+          button.setBackground(originalColor);
+        }
+      }
+    });
+
+    return button;
   }
 
   private JPanel createControlPanel() {
@@ -334,34 +473,37 @@ public class Gui {
     gbc.fill = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 1.0;
 
+    Color buttonColor = new Color(52, 73, 94);
+    int buttonHeight = isLaptopSize ? 28 : 32;
+
     // Traffic Sequence Section
     addSectionLabel(panel, "TRAFFIC SEQUENCES", gbc, 0);
-    addControlButton(panel, "ALLOW BOAT TRAFFIC", new Color(41, 128, 185), "allow_boat_traffic", gbc, 1, null);
-    addControlButton(panel, "ALLOW ROAD TRAFFIC", new Color(41, 128, 185), "allow_road_traffic", gbc, 2, null);
+    addControlButton(panel, "ALLOW BOAT TRAFFIC", buttonColor, "allow_boat_traffic", gbc, 1, buttonHeight);
+    addControlButton(panel, "ALLOW ROAD TRAFFIC", buttonColor, "allow_road_traffic", gbc, 2, buttonHeight);
 
     // System Test Section
     addSectionLabel(panel, "SYSTEM TESTING", gbc, 3);
-    addControlButton(panel, "RUN FULL TEST", new Color(155, 89, 182), "run_full_test", gbc, 4, null);
-    addControlButton(panel, "PERFORM DIAGNOSTICS", new Color(230, 126, 34), "perform_diagnostics", gbc, 5, null);
-    addControlButton(panel, "RESTART ESP32", new Color(192, 57, 43), "restart", gbc, 6, null);
+    addControlButton(panel, "RUN FULL TEST", buttonColor, "run_full_test", gbc, 4, buttonHeight);
+    addControlButton(panel, "PERFORM DIAGNOSTICS", buttonColor, "perform_diagnostics", gbc, 5, buttonHeight);
+    addControlButton(panel, "RESTART ESP32", new Color(192, 57, 43), "restart", gbc, 6, buttonHeight);
 
     // Road Light Control Section
     addSectionLabel(panel, "ROAD LIGHTS", gbc, 7);
-    addControlButton(panel, "RED", new Color(231, 76, 60), "road_lights_red", gbc, 8, null);
-    addControlButton(panel, "YELLOW", new Color(241, 196, 15), "road_lights_yellow", gbc, 9, null);
-    addControlButton(panel, "GREEN", new Color(46, 204, 113), "road_lights_green", gbc, 10, null);
+    addControlButton(panel, "RED", new Color(231, 76, 60), "road_lights_red", gbc, 8, buttonHeight);
+    addControlButton(panel, "YELLOW", new Color(241, 196, 15), "road_lights_yellow", gbc, 9, buttonHeight);
+    addControlButton(panel, "GREEN", new Color(46, 204, 113), "road_lights_green", gbc, 10, buttonHeight);
 
     // Boat Light Control Section
     addSectionLabel(panel, "BOAT LIGHTS", gbc, 11);
-    addControlButton(panel, "RED", new Color(231, 76, 60), "boat_lights_red", gbc, 12, null);
-    addControlButton(panel, "GREEN", new Color(46, 204, 113), "boat_lights_green", gbc, 13, null);
+    addControlButton(panel, "RED", new Color(231, 76, 60), "boat_lights_red", gbc, 12, buttonHeight);
+    addControlButton(panel, "GREEN", new Color(46, 204, 113), "boat_lights_green", gbc, 13, buttonHeight);
 
     // Bridge Lights Control Section
     addSectionLabel(panel, "BRIDGE LIGHTS", gbc, 14);
 
     gbc.gridy = 15;
     JCheckBox manualControlCheckbox = new JCheckBox("Manual Control");
-    manualControlCheckbox.setFont(new Font("Arial", Font.PLAIN, 12));
+    manualControlCheckbox.setFont(new Font("Arial", Font.PLAIN, 11));
     manualControlCheckbox.setBackground(new Color(236, 240, 241));
     manualControlCheckbox.addActionListener(e -> {
       if (isOverrideMode && mcpSendObject != null) {
@@ -377,14 +519,20 @@ public class Gui {
     manualControlCheckbox.setEnabled(false);
     panel.add(manualControlCheckbox, gbc);
 
-    addControlButton(panel, "LIGHTS ON", new Color(255, 193, 7), "manual_bridge_lights_on", gbc, 16, null);
-    addControlButton(panel, "LIGHTS OFF", new Color(158, 158, 158), "manual_bridge_lights_off", gbc, 17, null);
+    addControlButton(panel, "LIGHTS ON", new Color(255, 193, 7), "manual_bridge_lights_on", gbc, 16, buttonHeight);
+    addControlButton(panel, "LIGHTS OFF", new Color(158, 158, 158), "manual_bridge_lights_off", gbc, 17, buttonHeight);
 
-    // Initially disable all buttons
+    // Initially disable all buttons (automatic mode) - disable directly on this
+    // panel
     Component[] components = panel.getComponents();
     for (Component component : components) {
       if (component instanceof JButton || component instanceof JCheckBox) {
         component.setEnabled(false);
+
+        if (component instanceof JButton) {
+          JButton button = (JButton) component;
+          button.setBackground(new Color(150, 150, 150));
+        }
       }
     }
 
@@ -394,56 +542,48 @@ public class Gui {
   private void addSectionLabel(JPanel panel, String text, GridBagConstraints gbc, int row) {
     gbc.gridy = row;
     JLabel label = new JLabel(text);
-    label.setFont(new Font("Arial", Font.BOLD, 12));
+    label.setFont(new Font("Arial", Font.BOLD, 11));
     label.setForeground(new Color(52, 73, 94));
     label.setBorder(BorderFactory.createEmptyBorder(3, 5, 1, 5));
     panel.add(label, gbc);
   }
 
-  private void addControlButton(JPanel panel, String text, Color color, String command, GridBagConstraints gbc,
-      int row, String targetState) {
+  private void addControlButton(JPanel panel, String text, Color color, String command,
+      GridBagConstraints gbc, int row, int height) {
     gbc.gridy = row;
     JButton button = new JButton(text);
     button.setBackground(color);
     button.setForeground(Color.WHITE);
-    button.setFont(new Font("Arial", Font.BOLD, 12));
+    button.setFont(new Font("Arial", Font.BOLD, 11));
     button.setFocusPainted(false);
     button.setBorderPainted(false);
-    button.setPreferredSize(new Dimension(170, 32));
+    button.setPreferredSize(new Dimension(170, height));
     button.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-    button.putClientProperty("targetState", targetState);
     button.putClientProperty("command", command);
-
-    button.setBorder(BorderFactory.createCompoundBorder(
-        BorderFactory.createLineBorder(color.darker(), 1, true),
-        BorderFactory.createEmptyBorder(4, 12, 4, 12)));
+    button.putClientProperty("originalColor", color);
 
     button.addMouseListener(new java.awt.event.MouseAdapter() {
       public void mouseEntered(java.awt.event.MouseEvent evt) {
-        if (button.isEnabled() && shouldButtonBeEnabled(button)) {
-          button.setBackground(new Color(93, 109, 126));
+        if (button.isEnabled()) {
+          button.setBackground(color.brighter());
         }
       }
 
       public void mouseExited(java.awt.event.MouseEvent evt) {
-        if (button.isEnabled() && shouldButtonBeEnabled(button)) {
-          button.setBackground(color);
-        } else if (!shouldButtonBeEnabled(button)) {
-          button.setBackground(new Color(150, 150, 150));
+        if (button.isEnabled()) {
+          Color originalColor = (Color) button.getClientProperty("originalColor");
+          button.setBackground(originalColor);
         }
       }
     });
 
     button.addActionListener(e -> {
-      if (!shouldButtonBeEnabled(button)) {
+      if (!button.isEnabled())
         return;
-      }
       if (isOverrideMode && mcpSendObject != null) {
         mcpSendObject.sendMessage(command);
         updateMessageLog("SENT: " + command);
-      } else if (!isOverrideMode) {
-        showModeWarning();
       } else {
         updateMessageLog("ERROR: Send object not initialized");
       }
@@ -452,118 +592,167 @@ public class Gui {
     panel.add(button, gbc);
   }
 
-  private boolean shouldButtonBeEnabled(JButton button) {
-    String targetState = (String) button.getClientProperty("targetState");
-    if (targetState == null) {
-      return true;
-    }
-
-    String command = (String) button.getClientProperty("command");
-    if (command.contains("bridge")) {
-      return !bridgeState.equals(targetState);
-    } else if (command.contains("gate")) {
-      return !gateState.equals(targetState);
-    }
-    return true;
-  }
-
-  private void updateButtonStates() {
-    Component[] components = controlPanel.getComponents();
-    for (Component component : components) {
-      if (component instanceof JButton) {
-        JButton button = (JButton) component;
-        boolean shouldEnable = shouldButtonBeEnabled(button);
-        if (!shouldEnable) {
-          button.setBackground(new Color(150, 150, 150));
-        } else if (isOverrideMode) {
-          button.setBackground(new Color(52, 73, 94));
-        }
-      }
-    }
-  }
-
   private JPanel createLogPanel() {
     JPanel panel = new JPanel(new BorderLayout());
     panel.setBorder(BorderFactory.createCompoundBorder(
         BorderFactory.createMatteBorder(2, 0, 0, 0, new Color(52, 73, 94)),
         BorderFactory.createEmptyBorder(5, 10, 5, 10)));
-    panel.setPreferredSize(new Dimension(0, 200));
+    int logHeight = isLaptopSize ? 200 : 250;
+    panel.setPreferredSize(new Dimension(0, logHeight));
     panel.setBackground(new Color(30, 30, 30));
 
-    // Title label
+    // Header panel with title and buttons
+    JPanel headerPanel = new JPanel(new BorderLayout());
+    headerPanel.setBackground(new Color(30, 30, 30));
+
     JLabel titleLabel = new JLabel("Message Log");
     titleLabel.setFont(new Font("Arial", Font.BOLD, 12));
     titleLabel.setForeground(new Color(200, 200, 200));
     titleLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
+    // Button panel
+    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+    buttonPanel.setBackground(new Color(30, 30, 30));
+
+    JButton clearButton = new JButton("Clear");
+    clearButton.setFont(new Font("Arial", Font.PLAIN, 10));
+    clearButton.setBackground(new Color(192, 57, 43));
+    clearButton.setForeground(Color.WHITE);
+    clearButton.setFocusPainted(false);
+    clearButton.setBorderPainted(false);
+    clearButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    clearButton.addActionListener(e -> clearMessageLog());
+
+    JButton exportButton = new JButton("Export");
+    exportButton.setFont(new Font("Arial", Font.PLAIN, 10));
+    exportButton.setBackground(new Color(52, 152, 219));
+    exportButton.setForeground(Color.WHITE);
+    exportButton.setFocusPainted(false);
+    exportButton.setBorderPainted(false);
+    exportButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    exportButton.addActionListener(e -> exportMessageLog());
+
+    buttonPanel.add(clearButton);
+    buttonPanel.add(exportButton);
+
+    headerPanel.add(titleLabel, BorderLayout.WEST);
+    headerPanel.add(buttonPanel, BorderLayout.EAST);
+
     messageLogArea = new JTextPane();
     messageLogArea.setEditable(false);
-    messageLogArea.setFont(new Font("Consolas", Font.PLAIN, 11));
+    messageLogArea.setFont(new Font("Consolas", Font.PLAIN, 10));
     messageLogArea.setBackground(new Color(30, 30, 30));
     messageLogArea.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
     JScrollPane scrollPane = new JScrollPane(messageLogArea);
     scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
     scrollPane.setBorder(null);
-    scrollPane.getVerticalScrollBar().setBackground(new Color(40, 40, 40));
-    scrollPane.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
-      @Override
-      protected void configureScrollBarColors() {
-        this.thumbColor = new Color(80, 80, 80);
-        this.trackColor = new Color(40, 40, 40);
-      }
-    });
 
-    panel.add(titleLabel, BorderLayout.NORTH);
+    panel.add(headerPanel, BorderLayout.NORTH);
     panel.add(scrollPane, BorderLayout.CENTER);
 
     return panel;
   }
 
-  private void updateModeDisplay() {
-    if (isOverrideMode) {
-      statusLabel.setText("Current Mode: OVERRIDE");
-      statusLabel.setForeground(new Color(231, 76, 60));
-      overrideModeButton.setBackground(new Color(231, 76, 60, 128));
-      automaticModeButton.setBackground(new Color(46, 204, 113));
-    } else {
-      statusLabel.setText("Current Mode: AUTOMATIC");
-      statusLabel.setForeground(new Color(46, 204, 113));
-      automaticModeButton.setBackground(new Color(46, 204, 113, 128));
-      overrideModeButton.setBackground(new Color(231, 76, 60));
+  private void clearMessageLog() {
+    messageLogArea.setText("");
+    updateMessageLog("Message log cleared");
+  }
+
+  private void exportMessageLog() {
+    JFileChooser fileChooser = new JFileChooser();
+    fileChooser.setDialogTitle("Export Message Log");
+
+    String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+    fileChooser.setSelectedFile(new File("bridge_log_" + timestamp + ".txt"));
+
+    int result = fileChooser.showSaveDialog(frame);
+
+    if (result == JFileChooser.APPROVE_OPTION) {
+      File file = fileChooser.getSelectedFile();
+      try (FileWriter writer = new FileWriter(file)) {
+        writer.write(messageLogArea.getText());
+
+        // Create custom styled option pane
+        JLabel message = new JLabel("<html><div style='text-align: center;'>" +
+            "Log exported successfully to:<br>" +
+            "<b>" + file.getAbsolutePath() + "</b></div></html>");
+        message.setFont(new Font("Arial", Font.PLAIN, 12));
+
+        JOptionPane optionPane = new JOptionPane(message, JOptionPane.INFORMATION_MESSAGE);
+        JDialog dialog = optionPane.createDialog(frame, "Export Successful");
+        dialog.setVisible(true);
+
+        updateMessageLog("Log exported to: " + file.getName());
+      } catch (IOException ex) {
+        // Create custom styled error pane
+        JLabel message = new JLabel("<html><div style='text-align: center;'>" +
+            "Error exporting log:<br>" +
+            "<b>" + ex.getMessage() + "</b></div></html>");
+        message.setFont(new Font("Arial", Font.PLAIN, 12));
+
+        JOptionPane optionPane = new JOptionPane(message, JOptionPane.ERROR_MESSAGE);
+        JDialog dialog = optionPane.createDialog(frame, "Export Error");
+        dialog.setVisible(true);
+
+        updateMessageLog("ERROR: Failed to export log - " + ex.getMessage());
+      }
     }
   }
 
-  private void toggleControlPanel(boolean enabled) {
+  private void setControlPanelEnabled(boolean enabled) {
     Component[] components = controlPanel.getComponents();
     for (Component component : components) {
       if (component instanceof JButton || component instanceof JCheckBox) {
         component.setEnabled(enabled);
-      }
-    }
 
-    if (enabled) {
-      controlPanel.setBackground(new Color(236, 240, 241));
-      updateButtonStates();
-    } else {
-      controlPanel.setBackground(new Color(220, 220, 220));
+        if (component instanceof JButton) {
+          JButton button = (JButton) component;
+          if (enabled) {
+            Color originalColor = (Color) button.getClientProperty("originalColor");
+            if (originalColor != null) {
+              button.setBackground(originalColor);
+            }
+          } else {
+            button.setBackground(new Color(150, 150, 150));
+          }
+        }
+      }
     }
   }
 
-  private void showModeWarning() {
-    JOptionPane.showMessageDialog(
-        frame,
-        "Manual controls are only available in Override Mode!\n"
-            + "Please switch to Override Mode first.",
-        "Mode Warning",
-        JOptionPane.WARNING_MESSAGE);
+  private void updateDiagnosticModeButtons() {
+    Component[] components = controlPanel.getComponents();
+    for (Component component : components) {
+      if (component instanceof JButton) {
+        JButton button = (JButton) component;
+        String command = (String) button.getClientProperty("command");
+
+        if (isDiagnosticMode) {
+          // Only enable restart and diagnostics buttons
+          boolean shouldEnable = command != null &&
+              (command.equals("restart") || command.equals("perform_diagnostics"));
+          button.setEnabled(shouldEnable);
+
+          if (shouldEnable) {
+            Color originalColor = (Color) button.getClientProperty("originalColor");
+            if (originalColor != null) {
+              button.setBackground(originalColor);
+            }
+          } else {
+            button.setBackground(new Color(150, 150, 150));
+          }
+        }
+      }
+    }
   }
 
   public void updateSystemStatus(String mode, String bridgeState, String gateState,
-      String roadDistance, String boatDistance,
-      String roadLight, String boatLight, String bridgeLight,
-      String sequenceState, String movementState,
-      String queueSize, String executing) {
+      String roadDistance, String boatDistance, String bridgeMovementDistance,
+      String boatClearanceDistance, String roadLight, String boatLight,
+      String bridgeLight, String manualBridgeLights, String sequenceState,
+      String movementState, String queueSize, String executing) {
+
     SwingUtilities.invokeLater(() -> {
       lastStatusTime = System.currentTimeMillis();
 
@@ -574,7 +763,15 @@ public class Gui {
       this.boatLight = boatLight;
       this.sequenceState = sequenceState;
 
-      // Update bridge status with color coding
+      // Update mode label
+      modeLabel.setText("Mode: " + mode);
+      if (mode.equals("AUTOMATIC")) {
+        modeLabel.setForeground(new Color(46, 204, 113));
+      } else if (mode.equals("OVERRIDE")) {
+        modeLabel.setForeground(new Color(231, 76, 60));
+      }
+
+      // Update bridge status
       bridgeStatusLabel.setText("Bridge: " + bridgeState);
       if (bridgeState.equals("OPEN")) {
         bridgeStatusLabel.setForeground(new Color(231, 76, 60));
@@ -584,7 +781,7 @@ public class Gui {
         bridgeStatusLabel.setForeground(Color.LIGHT_GRAY);
       }
 
-      // Update gate status with color coding
+      // Update gate status
       gateStatusLabel.setText("Gate: " + gateState);
       if (gateState.equals("OPEN")) {
         gateStatusLabel.setForeground(new Color(46, 204, 113));
@@ -595,6 +792,9 @@ public class Gui {
       }
 
       // Update sequence state
+      boolean wasDiagnostic = isDiagnosticMode;
+      isDiagnosticMode = sequenceState.equals("DIAGNOSTIC");
+
       sequenceStateLabel.setText("State: " + sequenceState);
       if (sequenceState.equals("DIAGNOSTIC")) {
         sequenceStateLabel.setForeground(new Color(231, 76, 60));
@@ -608,6 +808,19 @@ public class Gui {
       // Update distances
       roadDistanceLabel.setText("Road: " + roadDistance + " cm");
       boatDistanceLabel.setText("Boat: " + boatDistance + " cm");
+      bridgeMovementLabel.setText("Bridge Sensor: " + bridgeMovementDistance + " cm");
+      boatClearanceLabel.setText("Clearance: " + boatClearanceDistance + " cm");
+
+      // Update manual lights status
+      manualLightsLabel.setText("Manual Lights: " + manualBridgeLights);
+      if (manualBridgeLights.equals("YES")) {
+        manualLightsLabel.setForeground(new Color(241, 196, 15));
+      } else {
+        manualLightsLabel.setForeground(Color.WHITE);
+      }
+
+      // Update weight label
+      lastWeightLabel.setText("Last Weight: " + lastWeightReading);
 
       // Update queue status if in override mode
       if (mode.equals("OVERRIDE") && queueSize != null && !queueSize.isEmpty()) {
@@ -623,33 +836,62 @@ public class Gui {
         queueStatusLabel.setText("");
       }
 
-      // Update mode if it has changed from ESP32
+      // Update mode if it has changed
       if (!mode.equals("UNKNOWN")) {
         boolean newOverrideMode = mode.equals("OVERRIDE");
         if (newOverrideMode != isOverrideMode) {
           isOverrideMode = newOverrideMode;
-          updateModeDisplay();
-          toggleControlPanel(isOverrideMode);
+          updateModeButtons();
+          setControlPanelEnabled(isOverrideMode);
+        }
+      }
+
+      // Check if diagnostic mode changed
+      if (wasDiagnostic != isDiagnosticMode) {
+        if (isDiagnosticMode && isOverrideMode) {
+          updateDiagnosticModeButtons();
+        } else if (!isDiagnosticMode && isOverrideMode) {
+          setControlPanelEnabled(true);
         }
       }
 
       // Update animation
       bridgePanel.updateState(bridgeState, gateState, roadLight, boatLight);
-
-      // Update bridge lights
       bridgePanel.updateBridgeLights(bridgeLight.equals("ON"));
-
-      // Update button states
-      updateButtonStates();
     });
+  }
+
+  public void updateWeightReading(String weight) {
+    SwingUtilities.invokeLater(() -> {
+      lastWeightReading = weight;
+      lastWeightLabel.setText("Last Weight: " + weight);
+      if (Integer.parseInt(weight) > 2240) {
+        lastWeightLabel.setForeground(new Color(231, 76, 60));
+      } else {
+        lastWeightLabel.setForeground(new Color(46, 204, 113));
+      }
+    });
+  }
+
+  private void updateModeButtons() {
+    if (isOverrideMode) {
+      automaticModeButton.setEnabled(true);
+      overrideModeButton.setEnabled(false);
+      automaticModeButton.setBackground(new Color(52, 73, 94));
+      overrideModeButton.setBackground(new Color(150, 150, 150));
+    } else {
+      automaticModeButton.setEnabled(false);
+      overrideModeButton.setEnabled(true);
+      automaticModeButton.setBackground(new Color(150, 150, 150));
+      overrideModeButton.setBackground(new Color(52, 73, 94));
+    }
   }
 
   public void updateMessageLog(String message) {
     if (messageLogArea != null) {
       SwingUtilities.invokeLater(() -> {
         try {
-          String timeStamp = java.time.LocalTime.now()
-              .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"));
+          String timeStamp = new SimpleDateFormat("HH:mm:ss").format(new Date());
           String newMessage = timeStamp + " - " + message + "\n";
 
           StyledDocument doc = messageLogArea.getStyledDocument();
@@ -675,19 +917,15 @@ public class Gui {
           }
 
           doc.insertString(0, newMessage, messageStyle);
-
-          // Keep scroll at top
           messageLogArea.setCaretPosition(0);
         } catch (BadLocationException e) {
           System.err.println("Error updating message log: " + e.getMessage());
         }
       });
-    } else {
-      System.out.println("Message log not initialized: " + message);
     }
   }
 
-  // Bridge Animation Panel
+  // Bridge Animation Panel (keeping same as before)
   class BridgeAnimationPanel extends JPanel {
     private String bridgeState = "CLOSED";
     private String gateState = "OPEN";
@@ -889,10 +1127,8 @@ public class Gui {
       int bridgeWidth = 180;
       int lightY = waterY - 85 + liftOffset - deckHeight / 2 - 10;
 
-      // Calculate pulse effect
       int pulseIntensity = (int) (Math.sin(lightPulse * 0.1) * 15 + 15);
 
-      // Draw 8 lights evenly spaced across the bridge
       int numLights = 8;
       int spacing = (bridgeWidth * 2) / (numLights + 1);
 
@@ -900,24 +1136,19 @@ public class Gui {
         int lightX = centerX - bridgeWidth + (i * spacing);
 
         if (bridgeLightsOn) {
-          // Draw glow effect when lights are on
           g2d.setColor(new Color(255, 220, 100, 60 + pulseIntensity));
           g2d.fillOval(lightX - 12, lightY - 12, 24, 24);
 
-          // Draw bright light
           g2d.setColor(new Color(255, 240, 150));
           g2d.fillOval(lightX - 6, lightY - 6, 12, 12);
 
-          // Draw highlight
           g2d.setColor(new Color(255, 255, 200));
           g2d.fillOval(lightX - 3, lightY - 4, 4, 4);
         } else {
-          // Draw dark/off light
           g2d.setColor(new Color(60, 60, 60));
           g2d.fillOval(lightX - 5, lightY - 5, 10, 10);
         }
 
-        // Draw light fixture/mount
         g2d.setColor(new Color(50, 50, 50));
         g2d.fillRect(lightX - 2, lightY + 5, 4, 6);
       }
@@ -964,12 +1195,12 @@ public class Gui {
       g2d.fillRect(x - 20, y - 150, 40, boxHeight);
 
       if (isRoadLight) {
-        drawLight(g2d, x, y - 133, activeLight.equals("RED"), Color.RED);
-        drawLight(g2d, x, y - 105, activeLight.equals("YELLOW"), new Color(255, 200, 0));
-        drawLight(g2d, x, y - 77, activeLight.equals("GREEN"), Color.GREEN);
+        drawLight(g2d, x, y - 133, activeLight.equals("RED") || activeLight.equals("ALL"), Color.RED);
+        drawLight(g2d, x, y - 105, activeLight.equals("YELLOW") || activeLight.equals("ALL"), new Color(255, 200, 0));
+        drawLight(g2d, x, y - 77, activeLight.equals("GREEN") || activeLight.equals("ALL"), Color.GREEN);
       } else {
-        drawLight(g2d, x, y - 133, activeLight.equals("RED"), Color.RED);
-        drawLight(g2d, x, y - 100, activeLight.equals("GREEN"), Color.GREEN);
+        drawLight(g2d, x, y - 133, activeLight.equals("RED") || activeLight.equals("ALL"), Color.RED);
+        drawLight(g2d, x, y - 100, activeLight.equals("GREEN") || activeLight.equals("ALL"), Color.GREEN);
       }
     }
 
