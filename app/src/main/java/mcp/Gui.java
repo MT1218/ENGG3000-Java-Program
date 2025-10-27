@@ -29,7 +29,6 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -123,11 +122,16 @@ public class Gui {
     });
     communicationCheckTimer.start();
 
-    // Warning flash timer - slower flash (1 second interval)
+    // Warning flash timer - flashes the warning panel when communication is lost
     warningFlashTimer = new Timer(1000, e -> {
-      if (communicationLost) {
+      if (communicationLost && warningPanel != null) {
         warningVisible = !warningVisible;
         warningPanel.setVisible(warningVisible);
+        warningPanel.repaint();
+      } else if (!communicationLost && warningPanel != null) {
+        // Ensure warning is hidden when communication is restored
+        warningPanel.setVisible(false);
+        warningPanel.repaint();
       }
     });
     warningFlashTimer.start();
@@ -137,6 +141,7 @@ public class Gui {
     SwingUtilities.invokeLater(() -> {
       if (connected) {
         warningPanel.setVisible(false);
+        warningVisible = false;
       }
     });
   }
@@ -240,11 +245,11 @@ public class Gui {
 
     // Title
     JLabel titleLabel = new JLabel("SYSTEM STATUS");
-    titleLabel.setFont(new Font("Arial", Font.BOLD, 15));
+    titleLabel.setFont(new Font("Arial", Font.BOLD, 13));
     titleLabel.setForeground(Color.WHITE);
     titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
     statsPanel.add(titleLabel);
-    statsPanel.add(Box.createVerticalStrut(15));
+    statsPanel.add(Box.createVerticalStrut(10));
 
     // Create all status labels - vertical list
     modeLabel = createStatLabel("Mode: AUTOMATIC");
@@ -261,25 +266,25 @@ public class Gui {
 
     // Add all labels vertically
     statsPanel.add(modeLabel);
-    statsPanel.add(Box.createVerticalStrut(7));
+    statsPanel.add(Box.createVerticalStrut(5));
     statsPanel.add(bridgeStatusLabel);
-    statsPanel.add(Box.createVerticalStrut(7));
+    statsPanel.add(Box.createVerticalStrut(5));
     statsPanel.add(gateStatusLabel);
-    statsPanel.add(Box.createVerticalStrut(7));
+    statsPanel.add(Box.createVerticalStrut(5));
     statsPanel.add(sequenceStateLabel);
-    statsPanel.add(Box.createVerticalStrut(10));
+    statsPanel.add(Box.createVerticalStrut(8));
     statsPanel.add(roadDistanceLabel);
-    statsPanel.add(Box.createVerticalStrut(7));
+    statsPanel.add(Box.createVerticalStrut(5));
     statsPanel.add(boatDistanceLabel);
-    statsPanel.add(Box.createVerticalStrut(7));
+    statsPanel.add(Box.createVerticalStrut(5));
     statsPanel.add(bridgeMovementLabel);
-    statsPanel.add(Box.createVerticalStrut(7));
+    statsPanel.add(Box.createVerticalStrut(5));
     statsPanel.add(boatClearanceLabel);
-    statsPanel.add(Box.createVerticalStrut(10));
+    statsPanel.add(Box.createVerticalStrut(8));
     statsPanel.add(manualLightsLabel);
-    statsPanel.add(Box.createVerticalStrut(7));
+    statsPanel.add(Box.createVerticalStrut(5));
     statsPanel.add(lastWeightLabel);
-    statsPanel.add(Box.createVerticalStrut(7));
+    statsPanel.add(Box.createVerticalStrut(5));
     statsPanel.add(queueStatusLabel);
 
     // Add glue to push everything to top
@@ -290,7 +295,7 @@ public class Gui {
 
   private JLabel createStatLabel(String text) {
     JLabel label = new JLabel(text);
-    label.setFont(new Font("Arial", Font.PLAIN, 13));
+    label.setFont(new Font("Arial", Font.PLAIN, 11));
     label.setForeground(Color.WHITE);
     label.setAlignmentX(Component.LEFT_ALIGNMENT);
     return label;
@@ -314,7 +319,7 @@ public class Gui {
         BorderFactory.createLineBorder(Color.WHITE, 3),
         BorderFactory.createEmptyBorder(30, 50, 30, 50)));
 
-    JLabel warningIcon = new JLabel("âš ");
+    JLabel warningIcon = new JLabel("⚠");
     warningIcon.setFont(new Font("Arial", Font.BOLD, 72));
     warningIcon.setForeground(Color.WHITE);
     warningIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -476,32 +481,79 @@ public class Gui {
     Color buttonColor = new Color(52, 73, 94);
     int buttonHeight = isLaptopSize ? 28 : 32;
 
+    // Emergency Controls Section
+    addSectionLabel(panel, "EMERGENCY CONTROLS", gbc, 0);
+
+    gbc.gridy = 1;
+    JButton emergencyStopButton = new JButton("EMERGENCY STOP");
+    emergencyStopButton.setBackground(new Color(192, 57, 43));
+    emergencyStopButton.setForeground(Color.WHITE);
+    emergencyStopButton.setFont(new Font("Arial", Font.BOLD, 11));
+    emergencyStopButton.setFocusPainted(false);
+    emergencyStopButton.setBorderPainted(false);
+    emergencyStopButton.setPreferredSize(new Dimension(170, buttonHeight));
+    emergencyStopButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    emergencyStopButton.putClientProperty("originalColor", new Color(192, 57, 43));
+
+    emergencyStopButton.addMouseListener(new java.awt.event.MouseAdapter() {
+      public void mouseEntered(java.awt.event.MouseEvent evt) {
+        if (emergencyStopButton.isEnabled()) {
+          emergencyStopButton.setBackground(new Color(231, 76, 60));
+        }
+      }
+
+      public void mouseExited(java.awt.event.MouseEvent evt) {
+        if (emergencyStopButton.isEnabled()) {
+          emergencyStopButton.setBackground(new Color(192, 57, 43));
+        }
+      }
+    });
+
+    emergencyStopButton.addActionListener(e -> {
+      int confirm = JOptionPane.showConfirmDialog(
+          frame,
+          "Activate EMERGENCY STOP?\n\nThis will:\n- Stop all motors immediately\n- Activate all warning lights\n- Sound alarm buzzer\n- Enter diagnostic mode\n- Require manual recovery",
+          "Emergency Stop Confirmation",
+          JOptionPane.YES_NO_OPTION,
+          JOptionPane.WARNING_MESSAGE);
+
+      if (confirm == JOptionPane.YES_OPTION) {
+        if (mcpSendObject != null) {
+          mcpSendObject.sendMessage("emergency_stop");
+          updateMessageLog("SENT: emergency_stop");
+        } else {
+          updateMessageLog("ERROR: Send object not initialized");
+        }
+      }
+    });
+    panel.add(emergencyStopButton, gbc);
+
     // Traffic Sequence Section
-    addSectionLabel(panel, "TRAFFIC SEQUENCES", gbc, 0);
-    addControlButton(panel, "ALLOW BOAT TRAFFIC", buttonColor, "allow_boat_traffic", gbc, 1, buttonHeight);
-    addControlButton(panel, "ALLOW ROAD TRAFFIC", buttonColor, "allow_road_traffic", gbc, 2, buttonHeight);
+    addSectionLabel(panel, "TRAFFIC SEQUENCES", gbc, 2);
+    addControlButton(panel, "ALLOW BOAT TRAFFIC", buttonColor, "allow_boat_traffic", gbc, 3, buttonHeight);
+    addControlButton(panel, "ALLOW ROAD TRAFFIC", buttonColor, "allow_road_traffic", gbc, 4, buttonHeight);
 
     // System Test Section
-    addSectionLabel(panel, "SYSTEM TESTING", gbc, 3);
-    addControlButton(panel, "RUN FULL TEST", buttonColor, "run_full_test", gbc, 4, buttonHeight);
-    addControlButton(panel, "PERFORM DIAGNOSTICS", buttonColor, "perform_diagnostics", gbc, 5, buttonHeight);
-    addControlButton(panel, "RESTART ESP32", new Color(192, 57, 43), "restart", gbc, 6, buttonHeight);
+    addSectionLabel(panel, "SYSTEM TESTING", gbc, 5);
+    addControlButton(panel, "RUN FULL TEST", buttonColor, "run_full_test", gbc, 6, buttonHeight);
+    addControlButton(panel, "PERFORM DIAGNOSTICS", buttonColor, "perform_diagnostics", gbc, 7, buttonHeight);
+    addControlButton(panel, "RESTART ESP32", new Color(192, 57, 43), "restart", gbc, 8, buttonHeight);
 
     // Road Light Control Section
-    addSectionLabel(panel, "ROAD LIGHTS", gbc, 7);
-    addControlButton(panel, "RED", new Color(231, 76, 60), "road_lights_red", gbc, 8, buttonHeight);
-    addControlButton(panel, "YELLOW", new Color(241, 196, 15), "road_lights_yellow", gbc, 9, buttonHeight);
-    addControlButton(panel, "GREEN", new Color(46, 204, 113), "road_lights_green", gbc, 10, buttonHeight);
+    addSectionLabel(panel, "ROAD LIGHTS", gbc, 9);
+    addControlButton(panel, "RED", new Color(231, 76, 60), "road_lights_red", gbc, 10, buttonHeight);
+    addControlButton(panel, "YELLOW", new Color(241, 196, 15), "road_lights_yellow", gbc, 11, buttonHeight);
+    addControlButton(panel, "GREEN", new Color(46, 204, 113), "road_lights_green", gbc, 12, buttonHeight);
 
     // Boat Light Control Section
-    addSectionLabel(panel, "BOAT LIGHTS", gbc, 11);
-    addControlButton(panel, "RED", new Color(231, 76, 60), "boat_lights_red", gbc, 12, buttonHeight);
-    addControlButton(panel, "GREEN", new Color(46, 204, 113), "boat_lights_green", gbc, 13, buttonHeight);
+    addSectionLabel(panel, "BOAT LIGHTS", gbc, 13);
+    addControlButton(panel, "RED", new Color(231, 76, 60), "boat_lights_red", gbc, 14, buttonHeight);
+    addControlButton(panel, "GREEN", new Color(46, 204, 113), "boat_lights_green", gbc, 15, buttonHeight);
 
     // Bridge Lights Control Section
-    addSectionLabel(panel, "BRIDGE LIGHTS", gbc, 14);
+    addSectionLabel(panel, "BRIDGE LIGHTS", gbc, 16);
 
-    gbc.gridy = 15;
+    gbc.gridy = 17;
     JCheckBox manualControlCheckbox = new JCheckBox("Manual Control");
     manualControlCheckbox.setFont(new Font("Arial", Font.PLAIN, 11));
     manualControlCheckbox.setBackground(new Color(236, 240, 241));
@@ -519,14 +571,22 @@ public class Gui {
     manualControlCheckbox.setEnabled(false);
     panel.add(manualControlCheckbox, gbc);
 
-    addControlButton(panel, "LIGHTS ON", new Color(255, 193, 7), "manual_bridge_lights_on", gbc, 16, buttonHeight);
-    addControlButton(panel, "LIGHTS OFF", new Color(158, 158, 158), "manual_bridge_lights_off", gbc, 17, buttonHeight);
+    addControlButton(panel, "LIGHTS ON", new Color(255, 193, 7), "manual_bridge_lights_on", gbc, 18, buttonHeight);
+    addControlButton(panel, "LIGHTS OFF", new Color(158, 158, 158), "manual_bridge_lights_off", gbc, 19, buttonHeight);
 
     // Initially disable all buttons (automatic mode) - disable directly on this
     // panel
     Component[] components = panel.getComponents();
     for (Component component : components) {
       if (component instanceof JButton || component instanceof JCheckBox) {
+        // Skip emergency stop button - it should always be enabled
+        if (component instanceof JButton) {
+          JButton button = (JButton) component;
+          if (button.getText().equals("EMERGENCY STOP")) {
+            continue;
+          }
+        }
+
         component.setEnabled(false);
 
         if (component instanceof JButton) {
@@ -597,7 +657,7 @@ public class Gui {
     panel.setBorder(BorderFactory.createCompoundBorder(
         BorderFactory.createMatteBorder(2, 0, 0, 0, new Color(52, 73, 94)),
         BorderFactory.createEmptyBorder(5, 10, 5, 10)));
-    int logHeight = isLaptopSize ? 200 : 250;
+    int logHeight = isLaptopSize ? 150 : 200;
     panel.setPreferredSize(new Dimension(0, logHeight));
     panel.setBackground(new Color(30, 30, 30));
 
@@ -672,29 +732,16 @@ public class Gui {
       File file = fileChooser.getSelectedFile();
       try (FileWriter writer = new FileWriter(file)) {
         writer.write(messageLogArea.getText());
-
-        // Create custom styled option pane
-        JLabel message = new JLabel("<html><div style='text-align: center;'>" +
-            "Log exported successfully to:<br>" +
-            "<b>" + file.getAbsolutePath() + "</b></div></html>");
-        message.setFont(new Font("Arial", Font.PLAIN, 12));
-
-        JOptionPane optionPane = new JOptionPane(message, JOptionPane.INFORMATION_MESSAGE);
-        JDialog dialog = optionPane.createDialog(frame, "Export Successful");
-        dialog.setVisible(true);
-
+        JOptionPane.showMessageDialog(frame,
+            "Log exported successfully to:\n" + file.getAbsolutePath(),
+            "Export Successful",
+            JOptionPane.INFORMATION_MESSAGE);
         updateMessageLog("Log exported to: " + file.getName());
       } catch (IOException ex) {
-        // Create custom styled error pane
-        JLabel message = new JLabel("<html><div style='text-align: center;'>" +
-            "Error exporting log:<br>" +
-            "<b>" + ex.getMessage() + "</b></div></html>");
-        message.setFont(new Font("Arial", Font.PLAIN, 12));
-
-        JOptionPane optionPane = new JOptionPane(message, JOptionPane.ERROR_MESSAGE);
-        JDialog dialog = optionPane.createDialog(frame, "Export Error");
-        dialog.setVisible(true);
-
+        JOptionPane.showMessageDialog(frame,
+            "Error exporting log:\n" + ex.getMessage(),
+            "Export Error",
+            JOptionPane.ERROR_MESSAGE);
         updateMessageLog("ERROR: Failed to export log - " + ex.getMessage());
       }
     }
@@ -704,6 +751,14 @@ public class Gui {
     Component[] components = controlPanel.getComponents();
     for (Component component : components) {
       if (component instanceof JButton || component instanceof JCheckBox) {
+        // Skip emergency stop button - it should always be enabled
+        if (component instanceof JButton) {
+          JButton button = (JButton) component;
+          if (button.getText().equals("EMERGENCY STOP")) {
+            continue;
+          }
+        }
+
         component.setEnabled(enabled);
 
         if (component instanceof JButton) {
@@ -910,7 +965,7 @@ public class Gui {
           } else if (message.startsWith("EXECUTED") || message.startsWith("MODE CHANGE")
               || message.startsWith("SYSTEM: communication_connected")) {
             StyleConstants.setForeground(messageStyle, new Color(46, 204, 113));
-          } else if (message.startsWith("INFO") || message.startsWith("SENT")) {
+          } else if (message.startsWith("INFO") || message.startsWith("SENT") || message.startsWith("RECEIVED")) {
             StyleConstants.setForeground(messageStyle, new Color(52, 152, 219));
           } else {
             StyleConstants.setForeground(messageStyle, new Color(149, 165, 166));

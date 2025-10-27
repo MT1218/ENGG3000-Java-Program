@@ -52,6 +52,7 @@ public class Receive extends Thread {
         // Handle STATUS messages (with or without space after colon)
         if (receivedMessage.startsWith("STATUS:") || receivedMessage.startsWith("STATUS :")) {
           parseStatusMessage(receivedMessage);
+          userInterface.updateMessageLog("RECEIVED: " + receivedMessage);
         }
         // Handle WEIGHT_CHECK messages
         else if (receivedMessage.startsWith("WEIGHT_CHECK:") || receivedMessage.startsWith("WEIGHT_CHECK :")) {
@@ -59,7 +60,7 @@ public class Receive extends Thread {
           if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
             String weight = receivedMessage.substring(colonIndex + 1).trim();
             userInterface.updateWeightReading(weight);
-            userInterface.updateMessageLog("WEIGHT CHECK: " + weight);
+            userInterface.updateMessageLog("RECEIVED: WEIGHT_CHECK: " + weight);
           }
         }
         // Handle MODE_CHANGE messages
@@ -67,7 +68,7 @@ public class Receive extends Thread {
           int colonIndex = receivedMessage.indexOf(":");
           if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
             String message = receivedMessage.substring(colonIndex + 1).trim();
-            userInterface.updateMessageLog("MODE CHANGE: " + message);
+            userInterface.updateMessageLog("RECEIVED: MODE_CHANGE: " + message);
           }
         }
         // Handle INFO messages
@@ -75,7 +76,7 @@ public class Receive extends Thread {
           int colonIndex = receivedMessage.indexOf(":");
           if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
             String message = receivedMessage.substring(colonIndex + 1).trim();
-            userInterface.updateMessageLog("INFO: " + message);
+            userInterface.updateMessageLog("RECEIVED: INFO: " + message);
           }
         }
         // Handle WARNING messages
@@ -83,7 +84,7 @@ public class Receive extends Thread {
           int colonIndex = receivedMessage.indexOf(":");
           if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
             String message = receivedMessage.substring(colonIndex + 1).trim();
-            userInterface.updateMessageLog("WARNING: " + message);
+            userInterface.updateMessageLog("RECEIVED: WARNING: " + message);
           }
         }
         // Handle ERROR messages
@@ -91,7 +92,7 @@ public class Receive extends Thread {
           int colonIndex = receivedMessage.indexOf(":");
           if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
             String message = receivedMessage.substring(colonIndex + 1).trim();
-            userInterface.updateMessageLog("ERROR: " + message);
+            userInterface.updateMessageLog("RECEIVED: ERROR: " + message);
           }
         }
         // Handle COMMAND_EXECUTION messages
@@ -100,7 +101,7 @@ public class Receive extends Thread {
           int colonIndex = receivedMessage.indexOf(":");
           if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
             String message = receivedMessage.substring(colonIndex + 1).trim();
-            userInterface.updateMessageLog("EXECUTED: " + message);
+            userInterface.updateMessageLog("RECEIVED: EXECUTED: " + message);
           }
         }
         // Handle SYSTEM_UPDATE messages
@@ -108,12 +109,12 @@ public class Receive extends Thread {
           int colonIndex = receivedMessage.indexOf(":");
           if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
             String message = receivedMessage.substring(colonIndex + 1).trim();
-            userInterface.updateMessageLog("SYSTEM: " + message);
+            userInterface.updateMessageLog("RECEIVED: SYSTEM: " + message);
           }
         }
         // Handle other messages
         else {
-          userInterface.updateMessageLog("ESP32: " + receivedMessage);
+          userInterface.updateMessageLog("RECEIVED: " + receivedMessage);
         }
       } catch (IOException e) {
         System.out.println("IOException in receive: " + e.getMessage());
