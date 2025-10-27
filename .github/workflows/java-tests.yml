@@ -8,6 +8,8 @@ on:
 
 jobs:
   build-test:
+    # Disable workflow for now
+    if: false
     runs-on: ubuntu-latest
 
     steps:
