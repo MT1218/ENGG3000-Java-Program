@@ -512,7 +512,8 @@ public class Gui {
     emergencyStopButton.addActionListener(e -> {
       int confirm = JOptionPane.showConfirmDialog(
           frame,
-          "Activate EMERGENCY STOP?\n\nThis will:\n- Stop all motors immediately\n- Activate all warning lights\n- Sound alarm buzzer\n- Enter diagnostic mode\n- Require manual recovery",
+          "Activate EMERGENCY STOP?\n\nThis will:\n- Stop all motors immediately\n- Activate all warning lights" +
+              "\n- Sound alarm buzzer\n- Enter diagnostic mode\n- Require manual recovery",
           "Emergency Stop Confirmation",
           JOptionPane.YES_NO_OPTION,
           JOptionPane.WARNING_MESSAGE);
