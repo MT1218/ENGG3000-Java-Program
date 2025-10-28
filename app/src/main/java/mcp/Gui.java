@@ -843,9 +843,9 @@ public class Gui {
       // Update bridge status
       bridgeStatusLabel.setText("Bridge: " + bridgeState);
       if (bridgeState.equals("OPEN")) {
-        bridgeStatusLabel.setForeground(new Color(231, 76, 60));
-      } else if (bridgeState.equals("CLOSED")) {
         bridgeStatusLabel.setForeground(new Color(46, 204, 113));
+      } else if (bridgeState.equals("CLOSED")) {
+        bridgeStatusLabel.setForeground(new Color(231, 76, 60));
       } else {
         bridgeStatusLabel.setForeground(new Color(150, 150, 150));
       }
