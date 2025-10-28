@@ -168,9 +168,11 @@ public class Gui {
 
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     frame.setLayout(new BorderLayout(10, 10));
+    frame.getContentPane().setBackground(new Color(18, 18, 18));
 
     // Create main center area with left stats panel
     JPanel centerArea = new JPanel(new BorderLayout(10, 10));
+    centerArea.setBackground(new Color(18, 18, 18));
     centerArea.add(createStatsPanel(), BorderLayout.WEST);
     centerArea.add(createCenterPanel(), BorderLayout.CENTER);
 
@@ -238,18 +240,17 @@ public class Gui {
   private JPanel createStatsPanel() {
     JPanel statsPanel = new JPanel();
     statsPanel.setLayout(new BoxLayout(statsPanel, BoxLayout.Y_AXIS));
-    statsPanel.setBackground(new Color(44, 62, 80));
-    statsPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+    statsPanel.setBackground(new Color(28, 28, 30));
+    statsPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+    statsPanel.setBorder(BorderFactory.createTitledBorder(
+        BorderFactory.createLineBorder(new Color(60, 60, 62), 2),
+        "System Status",
+        0,
+        0,
+        new Font("Arial", Font.BOLD, 13),
+        new Color(200, 200, 200)));
     int panelWidth = isLaptopSize ? 220 : 250;
     statsPanel.setPreferredSize(new Dimension(panelWidth, 0));
-
-    // Title
-    JLabel titleLabel = new JLabel("SYSTEM STATUS");
-    titleLabel.setFont(new Font("Arial", Font.BOLD, 13));
-    titleLabel.setForeground(Color.WHITE);
-    titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-    statsPanel.add(titleLabel);
-    statsPanel.add(Box.createVerticalStrut(10));
 
     // Create all status labels - vertical list
     modeLabel = createStatLabel("Mode: AUTOMATIC");
@@ -296,14 +297,14 @@ public class Gui {
   private JLabel createStatLabel(String text) {
     JLabel label = new JLabel(text);
     label.setFont(new Font("Arial", Font.PLAIN, 11));
-    label.setForeground(Color.WHITE);
+    label.setForeground(new Color(180, 180, 180));
     label.setAlignmentX(Component.LEFT_ALIGNMENT);
     return label;
   }
 
   private JPanel createCenterPanel() {
     JPanel centerPanel = new JPanel(new BorderLayout());
-    centerPanel.setBackground(new Color(52, 73, 94));
+    centerPanel.setBackground(new Color(18, 18, 18));
 
     bridgePanel = new BridgeAnimationPanel();
 
@@ -355,12 +356,13 @@ public class Gui {
     JPanel rightPanel = new JPanel(new BorderLayout(5, 5));
     int panelWidth = isLaptopSize ? 400 : 500;
     rightPanel.setPreferredSize(new Dimension(panelWidth, 0));
-    rightPanel.setBackground(new Color(236, 240, 241));
+    rightPanel.setBackground(new Color(28, 28, 30));
 
     // Create main container with vertical layout
     JPanel mainContainer = new JPanel();
     mainContainer.setLayout(new BoxLayout(mainContainer, BoxLayout.Y_AXIS));
-    mainContainer.setBackground(new Color(236, 240, 241));
+    mainContainer.setBackground(new Color(28, 28, 30));
+    mainContainer.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
     modeControlPanel = createModeControlPanel();
     controlPanel = createControlPanel();
@@ -375,6 +377,7 @@ public class Gui {
     scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
     scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
     scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+    scrollPane.getViewport().setBackground(new Color(28, 28, 30));
 
     rightPanel.add(scrollPane, BorderLayout.CENTER);
 
@@ -384,13 +387,13 @@ public class Gui {
   private JPanel createModeControlPanel() {
     JPanel panel = new JPanel(new GridBagLayout());
     panel.setBorder(BorderFactory.createTitledBorder(
-        BorderFactory.createLineBorder(new Color(52, 73, 94), 2),
+        BorderFactory.createLineBorder(new Color(60, 60, 62), 2),
         "Mode Controls",
         0,
         0,
         new Font("Arial", Font.BOLD, 13),
-        new Color(52, 73, 94)));
-    panel.setBackground(new Color(236, 240, 241));
+        new Color(200, 200, 200)));
+    panel.setBackground(new Color(28, 28, 30));
     panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 120));
 
     GridBagConstraints gbc = new GridBagConstraints();
@@ -399,7 +402,7 @@ public class Gui {
     gbc.weightx = 1.0;
     gbc.gridy = 0;
 
-    Color buttonColor = new Color(52, 73, 94);
+    Color buttonColor = new Color(60, 60, 62);
     int buttonHeight = isLaptopSize ? 35 : 40;
 
     automaticModeButton = createModeButton("SWITCH TO AUTOMATIC MODE", buttonColor, buttonHeight);
@@ -436,7 +439,7 @@ public class Gui {
   private JButton createModeButton(String text, Color color, int height) {
     JButton button = new JButton(text);
     button.setBackground(color);
-    button.setForeground(Color.WHITE);
+    button.setForeground(new Color(220, 220, 220));
     button.setFont(new Font("Arial", Font.BOLD, 13));
     button.setFocusPainted(false);
     button.setBorderPainted(false);
@@ -465,20 +468,20 @@ public class Gui {
   private JPanel createControlPanel() {
     JPanel panel = new JPanel(new GridBagLayout());
     panel.setBorder(BorderFactory.createTitledBorder(
-        BorderFactory.createLineBorder(new Color(52, 73, 94), 2),
+        BorderFactory.createLineBorder(new Color(60, 60, 62), 2),
         "Manual Override Controls",
         0,
         0,
         new Font("Arial", Font.BOLD, 13),
-        new Color(52, 73, 94)));
-    panel.setBackground(new Color(236, 240, 241));
+        new Color(200, 200, 200)));
+    panel.setBackground(new Color(28, 28, 30));
 
     GridBagConstraints gbc = new GridBagConstraints();
     gbc.insets = new Insets(3, 10, 3, 10);
     gbc.fill = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 1.0;
 
-    Color buttonColor = new Color(52, 73, 94);
+    Color buttonColor = new Color(60, 60, 62);
     int buttonHeight = isLaptopSize ? 28 : 32;
 
     // Emergency Controls Section
@@ -557,7 +560,8 @@ public class Gui {
     gbc.gridy = 17;
     JCheckBox manualControlCheckbox = new JCheckBox("Manual Control");
     manualControlCheckbox.setFont(new Font("Arial", Font.PLAIN, 11));
-    manualControlCheckbox.setBackground(new Color(236, 240, 241));
+    manualControlCheckbox.setBackground(new Color(28, 28, 30));
+    manualControlCheckbox.setForeground(new Color(180, 180, 180));
     manualControlCheckbox.addActionListener(e -> {
       if (isOverrideMode && mcpSendObject != null) {
         if (manualControlCheckbox.isSelected()) {
@@ -573,7 +577,7 @@ public class Gui {
     panel.add(manualControlCheckbox, gbc);
 
     addControlButton(panel, "LIGHTS ON", new Color(255, 193, 7), "manual_bridge_lights_on", gbc, 18, buttonHeight);
-    addControlButton(panel, "LIGHTS OFF", new Color(158, 158, 158), "manual_bridge_lights_off", gbc, 19, buttonHeight);
+    addControlButton(panel, "LIGHTS OFF", new Color(100, 100, 100), "manual_bridge_lights_off", gbc, 19, buttonHeight);
 
     // Initially disable all buttons (automatic mode) - disable directly on this
     // panel
@@ -592,7 +596,7 @@ public class Gui {
 
         if (component instanceof JButton) {
           JButton button = (JButton) component;
-          button.setBackground(new Color(150, 150, 150));
+          button.setBackground(new Color(70, 70, 72));
         }
       }
     }
@@ -604,7 +608,7 @@ public class Gui {
     gbc.gridy = row;
     JLabel label = new JLabel(text);
     label.setFont(new Font("Arial", Font.BOLD, 11));
-    label.setForeground(new Color(52, 73, 94));
+    label.setForeground(new Color(160, 160, 160));
     label.setBorder(BorderFactory.createEmptyBorder(3, 5, 1, 5));
     panel.add(label, gbc);
   }
@@ -656,15 +660,15 @@ public class Gui {
   private JPanel createLogPanel() {
     JPanel panel = new JPanel(new BorderLayout());
     panel.setBorder(BorderFactory.createCompoundBorder(
-        BorderFactory.createMatteBorder(2, 0, 0, 0, new Color(52, 73, 94)),
+        BorderFactory.createMatteBorder(2, 0, 0, 0, new Color(60, 60, 62)),
         BorderFactory.createEmptyBorder(5, 10, 5, 10)));
-    int logHeight = isLaptopSize ? 150 : 200;
+    int logHeight = isLaptopSize ? 250 : 300;
     panel.setPreferredSize(new Dimension(0, logHeight));
-    panel.setBackground(new Color(30, 30, 30));
+    panel.setBackground(new Color(18, 18, 18));
 
     // Header panel with title and buttons
     JPanel headerPanel = new JPanel(new BorderLayout());
-    headerPanel.setBackground(new Color(30, 30, 30));
+    headerPanel.setBackground(new Color(18, 18, 18));
 
     JLabel titleLabel = new JLabel("Message Log");
     titleLabel.setFont(new Font("Arial", Font.BOLD, 12));
@@ -673,7 +677,7 @@ public class Gui {
 
     // Button panel
     JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
-    buttonPanel.setBackground(new Color(30, 30, 30));
+    buttonPanel.setBackground(new Color(18, 18, 18));
 
     JButton clearButton = new JButton("Clear");
     clearButton.setFont(new Font("Arial", Font.PLAIN, 10));
@@ -702,7 +706,8 @@ public class Gui {
     messageLogArea = new JTextPane();
     messageLogArea.setEditable(false);
     messageLogArea.setFont(new Font("Consolas", Font.PLAIN, 10));
-    messageLogArea.setBackground(new Color(30, 30, 30));
+    messageLogArea.setBackground(new Color(18, 18, 18));
+    messageLogArea.setForeground(new Color(180, 180, 180));
     messageLogArea.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
     JScrollPane scrollPane = new JScrollPane(messageLogArea);
@@ -770,7 +775,7 @@ public class Gui {
               button.setBackground(originalColor);
             }
           } else {
-            button.setBackground(new Color(150, 150, 150));
+            button.setBackground(new Color(70, 70, 72));
           }
         }
       }
@@ -796,7 +801,7 @@ public class Gui {
               button.setBackground(originalColor);
             }
           } else {
-            button.setBackground(new Color(150, 150, 150));
+            button.setBackground(new Color(70, 70, 72));
           }
         }
       }
@@ -834,7 +839,7 @@ public class Gui {
       } else if (bridgeState.equals("CLOSED")) {
         bridgeStatusLabel.setForeground(new Color(46, 204, 113));
       } else {
-        bridgeStatusLabel.setForeground(Color.LIGHT_GRAY);
+        bridgeStatusLabel.setForeground(new Color(150, 150, 150));
       }
 
       // Update gate status
@@ -844,7 +849,7 @@ public class Gui {
       } else if (gateState.equals("CLOSED")) {
         gateStatusLabel.setForeground(new Color(231, 76, 60));
       } else {
-        gateStatusLabel.setForeground(Color.LIGHT_GRAY);
+        gateStatusLabel.setForeground(new Color(150, 150, 150));
       }
 
       // Update sequence state
@@ -872,7 +877,7 @@ public class Gui {
       if (manualBridgeLights.equals("YES")) {
         manualLightsLabel.setForeground(new Color(241, 196, 15));
       } else {
-        manualLightsLabel.setForeground(Color.WHITE);
+        manualLightsLabel.setForeground(new Color(180, 180, 180));
       }
 
       // Update weight label
@@ -885,7 +890,7 @@ public class Gui {
           queueText += " (Executing)";
           queueStatusLabel.setForeground(new Color(241, 196, 15));
         } else {
-          queueStatusLabel.setForeground(Color.WHITE);
+          queueStatusLabel.setForeground(new Color(180, 180, 180));
         }
         queueStatusLabel.setText(queueText);
       } else {
@@ -933,13 +938,13 @@ public class Gui {
     if (isOverrideMode) {
       automaticModeButton.setEnabled(true);
       overrideModeButton.setEnabled(false);
-      automaticModeButton.setBackground(new Color(52, 73, 94));
-      overrideModeButton.setBackground(new Color(150, 150, 150));
+      automaticModeButton.setBackground(new Color(60, 60, 62));
+      overrideModeButton.setBackground(new Color(70, 70, 72));
     } else {
       automaticModeButton.setEnabled(false);
       overrideModeButton.setEnabled(true);
-      automaticModeButton.setBackground(new Color(150, 150, 150));
-      overrideModeButton.setBackground(new Color(52, 73, 94));
+      automaticModeButton.setBackground(new Color(70, 70, 72));
+      overrideModeButton.setBackground(new Color(60, 60, 62));
     }
   }
 
@@ -952,10 +957,10 @@ public class Gui {
 
           StyledDocument doc = messageLogArea.getStyledDocument();
 
-          // Change all existing text to white
-          Style whiteStyle = messageLogArea.addStyle("White", null);
-          StyleConstants.setForeground(whiteStyle, Color.WHITE);
-          doc.setCharacterAttributes(0, doc.getLength(), whiteStyle, false);
+          // Change all existing text to light gray
+          Style defaultStyle = messageLogArea.addStyle("Default", null);
+          StyleConstants.setForeground(defaultStyle, new Color(180, 180, 180));
+          doc.setCharacterAttributes(0, doc.getLength(), defaultStyle, false);
 
           // Determine color based on message type
           Style messageStyle = messageLogArea.addStyle("MessageStyle", null);
@@ -981,7 +986,7 @@ public class Gui {
     }
   }
 
-  // Bridge Animation Panel (keeping same as before)
+  // Bridge Animation Panel
   class BridgeAnimationPanel extends JPanel {
     private String bridgeState = "CLOSED";
     private String gateState = "OPEN";
@@ -992,11 +997,11 @@ public class Gui {
     private float bridgeAngle = 0f;
     private float gateAngle = 90f;
     private Timer animationTimer;
-    private int waveOffset = 0;
+    private double waveOffset = 0;
     private int lightPulse = 0;
 
     public BridgeAnimationPanel() {
-      setBackground(new Color(240, 242, 245));
+      setBackground(new Color(18, 18, 18));
 
       animationTimer = new Timer(16, e -> {
         boolean needsRepaint = false;
@@ -1013,7 +1018,8 @@ public class Gui {
           needsRepaint = true;
         }
 
-        waveOffset = (waveOffset + 1) % 40;
+        // Continuously increment wave offset without resetting
+        waveOffset += 1.0;
         lightPulse = (lightPulse + 1) % 60;
         needsRepaint = true;
 
@@ -1044,57 +1050,85 @@ public class Gui {
       int width = getWidth();
       int height = getHeight();
       int centerX = width / 2;
-      int waterY = height / 2 + 50;
+      int waterY = height / 2 + 140;
 
-      // Draw water
-      g2d.setColor(new Color(70, 90, 110));
-      g2d.fillRect(0, waterY, width, height - waterY);
+      // Draw sky gradient background
+      java.awt.GradientPaint skyGradient = new java.awt.GradientPaint(
+          0, 0, new Color(135, 206, 250), // Light sky blue at top
+          0, waterY, new Color(176, 224, 255) // Lighter blue at horizon
+      );
+      g2d.setPaint(skyGradient);
+      g2d.fillRect(0, 0, width, waterY);
 
-      // Draw animated wave pattern
-      g2d.setColor(new Color(80, 100, 120));
-      for (int y = waterY; y < height; y += 20) {
-        for (int x = -40; x < width + 40; x += 40) {
-          int offsetX = x + waveOffset;
-          if (y % 40 == 0) {
-            offsetX = x - waveOffset;
-          }
-          g2d.fillOval(offsetX, y, 30, 8);
+      // Draw clouds
+      drawClouds(g2d, width, waterY);
+
+      // Draw top water layer (behind bridge)
+      int topLayerColor = 0x133050;
+      int totalLayers = 6;
+      int layerHeight = (height - waterY) / totalLayers;
+
+      // Draw just the first (top) layer behind the bridge
+      g2d.setColor(new Color(topLayerColor));
+      for (int wavePass = 0; wavePass < 3; wavePass++) {
+        int yStart = waterY - 15;
+        int yEnd = yStart + layerHeight + 10;
+
+        java.awt.geom.Path2D.Double wavePath = new java.awt.geom.Path2D.Double();
+        wavePath.moveTo(-10, yStart);
+
+        double direction = 1.0;
+        double waveSpeed = waveOffset * 0.5 * direction;
+
+        for (int x = -10; x <= width + 10; x += 3) {
+          double wave1 = Math.sin((x + waveSpeed * 2 + wavePass * 15) * 0.02) * 8;
+          double wave2 = Math.sin((x - waveSpeed * 1.5 + wavePass * 10) * 0.03) * 5;
+          double wave3 = Math.sin((x + waveSpeed + wavePass * 5) * 0.05) * 3;
+
+          int yWave = yStart + (int) (wave1 + wave2 + wave3);
+          wavePath.lineTo(x, yWave);
         }
+
+        wavePath.lineTo(width + 10, yEnd + 5);
+        wavePath.lineTo(-10, yEnd + 5);
+        wavePath.closePath();
+
+        g2d.fill(wavePath);
       }
 
+      // Draw bridge and structures
       int liftOffset = (int) (-bridgeAngle * 2.2f);
-
       int bridgeWidth = 180;
       int towerWidth = 30;
       int towerHeight = 280;
 
       // Left tower
-      g2d.setColor(new Color(80, 85, 90));
+      g2d.setColor(new Color(50, 55, 60));
       g2d.fillRect(centerX - bridgeWidth - towerWidth, waterY - towerHeight, towerWidth, towerHeight);
 
-      g2d.setColor(new Color(70, 75, 80));
+      g2d.setColor(new Color(40, 45, 50));
       g2d.fillRect(centerX - bridgeWidth - towerWidth - 5, waterY - towerHeight - 10, towerWidth + 10, 10);
 
-      g2d.setColor(new Color(40, 45, 50));
+      g2d.setColor(new Color(25, 30, 35));
       for (int i = 0; i < 5; i++) {
         g2d.fillRect(centerX - bridgeWidth - towerWidth + 8, waterY - towerHeight + 30 + i * 45, 14, 25);
       }
 
       // Right tower
-      g2d.setColor(new Color(80, 85, 90));
+      g2d.setColor(new Color(50, 55, 60));
       g2d.fillRect(centerX + bridgeWidth, waterY - towerHeight, towerWidth, towerHeight);
 
-      g2d.setColor(new Color(70, 75, 80));
+      g2d.setColor(new Color(40, 45, 50));
       g2d.fillRect(centerX + bridgeWidth - 5, waterY - towerHeight - 10, towerWidth + 10, 10);
 
-      g2d.setColor(new Color(40, 45, 50));
+      g2d.setColor(new Color(25, 30, 35));
       for (int i = 0; i < 5; i++) {
         g2d.fillRect(centerX + bridgeWidth + 8, waterY - towerHeight + 30 + i * 45, 14, 25);
       }
 
       // Draw lift cables
       g2d.setStroke(new BasicStroke(2));
-      g2d.setColor(new Color(60, 65, 70));
+      g2d.setColor(new Color(80, 85, 90));
 
       // Left cables
       g2d.drawLine(centerX - bridgeWidth - towerWidth + 5, waterY - towerHeight + 5,
@@ -1119,12 +1153,12 @@ public class Gui {
       // Draw bridge deck
       int deckHeight = 18;
 
-      g2d.setColor(new Color(90, 95, 100));
+      g2d.setColor(new Color(60, 65, 70));
       g2d.fillRect(centerX - bridgeWidth, waterY - 85 + liftOffset - deckHeight / 2,
           bridgeWidth * 2, deckHeight);
 
       g2d.setStroke(new BasicStroke(2));
-      g2d.setColor(new Color(70, 75, 80));
+      g2d.setColor(new Color(50, 55, 60));
       for (int i = centerX - bridgeWidth; i < centerX + bridgeWidth; i += 30) {
         g2d.drawLine(i, waterY - 85 + liftOffset - deckHeight / 2,
             i + 15, waterY - 85 + liftOffset + deckHeight / 2);
@@ -1132,17 +1166,17 @@ public class Gui {
             i + 30, waterY - 85 + liftOffset + deckHeight / 2);
       }
 
-      g2d.setColor(new Color(40, 42, 45));
+      g2d.setColor(new Color(35, 37, 40));
       g2d.fillRect(centerX - bridgeWidth, waterY - 85 + liftOffset - 4,
           bridgeWidth * 2, 8);
 
-      g2d.setColor(new Color(220, 220, 220));
+      g2d.setColor(new Color(180, 180, 180));
       for (int i = centerX - bridgeWidth; i < centerX + bridgeWidth; i += 40) {
         g2d.fillRect(i, waterY - 85 + liftOffset - 1, 20, 2);
       }
 
       g2d.setStroke(new BasicStroke(1));
-      g2d.setColor(new Color(100, 105, 110));
+      g2d.setColor(new Color(70, 75, 80));
       g2d.drawLine(centerX - bridgeWidth, waterY - 85 + liftOffset - deckHeight / 2 - 3,
           centerX + bridgeWidth, waterY - 85 + liftOffset - deckHeight / 2 - 3);
       g2d.drawLine(centerX - bridgeWidth, waterY - 85 + liftOffset + deckHeight / 2 + 3,
@@ -1152,18 +1186,18 @@ public class Gui {
       drawBridgeLights(g2d, centerX, waterY, liftOffset, deckHeight);
 
       // Draw approach roads
-      g2d.setColor(new Color(40, 42, 45));
-      g2d.fillRect(0, waterY - 89, centerX - bridgeWidth, 8);
+      g2d.setColor(new Color(35, 37, 40));
+      g2d.fillRect(-5, waterY - 89, centerX - bridgeWidth + 5, 8);
       g2d.fillRect(centerX + bridgeWidth, waterY - 89, width - (centerX + bridgeWidth), 8);
 
       // Draw support pillars
-      g2d.setColor(new Color(70, 75, 80));
+      g2d.setColor(new Color(45, 50, 55));
       int pillarHeight = 89 - 8;
-      g2d.fillRect(0, waterY - 81, centerX - bridgeWidth, pillarHeight);
+      g2d.fillRect(-5, waterY - 81, centerX - bridgeWidth + 5, pillarHeight);
       g2d.fillRect(centerX + bridgeWidth, waterY - 81, width - (centerX + bridgeWidth), pillarHeight);
 
       // Road markings
-      g2d.setColor(new Color(220, 220, 220));
+      g2d.setColor(new Color(180, 180, 180));
       for (int i = 40; i < centerX - bridgeWidth; i += 40) {
         g2d.fillRect(i, waterY - 86, 20, 2);
       }
@@ -1177,6 +1211,88 @@ public class Gui {
 
       // Draw traffic lights
       drawTrafficLights(g2d, centerX, waterY);
+
+      // Draw remaining water layers (in front of bridge)
+      int[] bottomLayerColors = {
+          0x183d67,
+          0x1e4b7e,
+          0x235995,
+          0x2966ac,
+          0x2e74c3
+      };
+
+      for (int layer = 1; layer < totalLayers; layer++) {
+        int colorValue = bottomLayerColors[layer - 1];
+        g2d.setColor(new Color(colorValue));
+
+        for (int wavePass = 0; wavePass < 3; wavePass++) {
+          int yStart = waterY + (layer * layerHeight) - 15;
+          int yEnd = yStart + layerHeight + 10;
+
+          java.awt.geom.Path2D.Double wavePath = new java.awt.geom.Path2D.Double();
+          wavePath.moveTo(-10, yStart);
+
+          double direction = (layer % 2 == 0) ? 1.0 : -1.0;
+          double waveSpeed = waveOffset * 0.5 * direction;
+
+          for (int x = -10; x <= width + 10; x += 3) {
+            double wave1 = Math.sin((x + waveSpeed * 2 + layer * 30 + wavePass * 15) * 0.02) * 8;
+            double wave2 = Math.sin((x - waveSpeed * 1.5 + layer * 20 + wavePass * 10) * 0.03) * 5;
+            double wave3 = Math.sin((x + waveSpeed + layer * 10 + wavePass * 5) * 0.05) * 3;
+
+            int yWave = yStart + (int) (wave1 + wave2 + wave3);
+            wavePath.lineTo(x, yWave);
+          }
+
+          wavePath.lineTo(width + 10, yEnd + 5);
+          wavePath.lineTo(-10, yEnd + 5);
+          wavePath.closePath();
+
+          g2d.fill(wavePath);
+        }
+      }
+    }
+
+    private void drawClouds(Graphics2D g2d, int width, int waterY) {
+      g2d.setColor(new Color(255, 255, 255, 180));
+
+      // Cloud positions (static for now, can animate later)
+      // Calculate cloud positions based on waveOffset for gentle movement
+      int cloudOffset = (int) (waveOffset * 0.2) % width;
+
+      // Draw multiple clouds at different positions
+      drawCloud(g2d, 100 + cloudOffset - width, 80, 1.0f);
+      drawCloud(g2d, 350 + cloudOffset - width, 120, 0.8f);
+      drawCloud(g2d, 600 + cloudOffset - width, 60, 1.2f);
+      drawCloud(g2d, 850 + cloudOffset - width, 140, 0.9f);
+
+      drawCloud(g2d, 100 + cloudOffset, 80, 1.0f);
+      drawCloud(g2d, 350 + cloudOffset, 120, 0.8f);
+      drawCloud(g2d, 600 + cloudOffset, 60, 1.2f);
+      drawCloud(g2d, 850 + cloudOffset, 140, 0.9f);
+
+      drawCloud(g2d, 100 + cloudOffset + width, 80, 1.0f);
+      drawCloud(g2d, 350 + cloudOffset + width, 120, 0.8f);
+      drawCloud(g2d, 600 + cloudOffset + width, 60, 1.2f);
+      drawCloud(g2d, 850 + cloudOffset + width, 140, 0.9f);
+    }
+
+    private void drawCloud(Graphics2D g2d, int x, int y, float scale) {
+      // Draw cloud using multiple overlapping circles
+      int baseSize = (int) (40 * scale);
+
+      g2d.setColor(new Color(255, 255, 255, 160));
+
+      // Main cloud body (multiple circles)
+      g2d.fillOval(x, y, baseSize, baseSize);
+      g2d.fillOval(x + baseSize / 3, y - baseSize / 4, baseSize, baseSize);
+      g2d.fillOval(x + baseSize * 2 / 3, y, baseSize, baseSize);
+      g2d.fillOval(x + baseSize, y + baseSize / 6, baseSize, baseSize);
+
+      // Add softer outer layer
+      g2d.setColor(new Color(255, 255, 255, 100));
+      g2d.fillOval(x - baseSize / 4, y + baseSize / 4, baseSize, baseSize);
+      g2d.fillOval(x + baseSize * 5 / 4, y + baseSize / 4, baseSize, baseSize);
     }
 
     private void drawBridgeLights(Graphics2D g2d, int centerX, int waterY, int liftOffset, int deckHeight) {
@@ -1201,11 +1317,11 @@ public class Gui {
           g2d.setColor(new Color(255, 255, 200));
           g2d.fillOval(lightX - 3, lightY - 4, 4, 4);
         } else {
-          g2d.setColor(new Color(60, 60, 60));
+          g2d.setColor(new Color(40, 40, 40));
           g2d.fillOval(lightX - 5, lightY - 5, 10, 10);
         }
 
-        g2d.setColor(new Color(50, 50, 50));
+        g2d.setColor(new Color(30, 30, 30));
         g2d.fillRect(lightX - 2, lightY + 5, 4, 6);
       }
     }
@@ -1238,15 +1354,15 @@ public class Gui {
     }
 
     private void drawTrafficLights(Graphics2D g2d, int centerX, int waterY) {
-      drawTrafficLightPole(g2d, centerX - 300, waterY - 81, roadLight, true);
-      drawTrafficLightPole(g2d, centerX + 300, waterY - 81, boatLight, false);
+      drawTrafficLightPole(g2d, centerX - 290, waterY - 81, roadLight, true);
+      drawTrafficLightPole(g2d, centerX + 290, waterY - 81, boatLight, false);
     }
 
     private void drawTrafficLightPole(Graphics2D g2d, int x, int y, String activeLight, boolean isRoadLight) {
-      g2d.setColor(new Color(50, 55, 60));
+      g2d.setColor(new Color(40, 45, 50));
       g2d.fillRect(x - 4, y - 120, 8, 120);
 
-      g2d.setColor(new Color(40, 45, 50));
+      g2d.setColor(new Color(30, 35, 40));
       int boxHeight = isRoadLight ? 90 : 60;
       g2d.fillRect(x - 20, y - 150, 40, boxHeight);
 
@@ -1261,10 +1377,10 @@ public class Gui {
     }
 
     private void drawLight(Graphics2D g2d, int x, int y, boolean active, Color color) {
-      g2d.setColor(active ? color : new Color(60, 60, 60));
+      g2d.setColor(active ? color : new Color(40, 40, 40));
       g2d.fillOval(x - 8, y - 8, 16, 16);
 
-      g2d.setColor(new Color(30, 30, 30));
+      g2d.setColor(new Color(20, 20, 20));
       g2d.setStroke(new BasicStroke(1));
       g2d.drawOval(x - 8, y - 8, 16, 16);
     }
