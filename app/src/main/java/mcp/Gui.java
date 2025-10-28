@@ -40,7 +40,6 @@ import javax.swing.OverlayLayout;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.text.BadLocationException;
-import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
 
@@ -173,7 +172,14 @@ public class Gui {
     // Create main center area with left stats panel
     JPanel centerArea = new JPanel(new BorderLayout(10, 10));
     centerArea.setBackground(new Color(18, 18, 18));
-    centerArea.add(createStatsPanel(), BorderLayout.WEST);
+
+    // Create wrapper panel for stats with full height background
+    JPanel statsOuterPanel = new JPanel(new BorderLayout());
+    statsOuterPanel.setBackground(new Color(28, 28, 30));
+    statsOuterPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+    statsOuterPanel.add(createStatsPanel(), BorderLayout.CENTER);
+
+    centerArea.add(statsOuterPanel, BorderLayout.WEST);
     centerArea.add(createCenterPanel(), BorderLayout.CENTER);
 
     JPanel rightPanel = createRightPanel();
@@ -241,14 +247,15 @@ public class Gui {
     JPanel statsPanel = new JPanel();
     statsPanel.setLayout(new BoxLayout(statsPanel, BoxLayout.Y_AXIS));
     statsPanel.setBackground(new Color(28, 28, 30));
-    statsPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-    statsPanel.setBorder(BorderFactory.createTitledBorder(
-        BorderFactory.createLineBorder(new Color(60, 60, 62), 2),
-        "System Status",
-        0,
-        0,
-        new Font("Arial", Font.BOLD, 13),
-        new Color(200, 200, 200)));
+    statsPanel.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(new Color(60, 60, 62), 2),
+            "System Status",
+            0,
+            0,
+            new Font("Arial", Font.BOLD, 13),
+            new Color(200, 200, 200)),
+        BorderFactory.createEmptyBorder(10, 10, 10, 10)));
     int panelWidth = isLaptopSize ? 220 : 250;
     statsPanel.setPreferredSize(new Dimension(panelWidth, 0));
 
@@ -403,7 +410,7 @@ public class Gui {
     gbc.gridy = 0;
 
     Color buttonColor = new Color(60, 60, 62);
-    int buttonHeight = isLaptopSize ? 35 : 40;
+    int buttonHeight = isLaptopSize ? 28 : 32;
 
     automaticModeButton = createModeButton("SWITCH TO AUTOMATIC MODE", buttonColor, buttonHeight);
     automaticModeButton.addActionListener(e -> {
@@ -440,7 +447,7 @@ public class Gui {
     JButton button = new JButton(text);
     button.setBackground(color);
     button.setForeground(new Color(220, 220, 220));
-    button.setFont(new Font("Arial", Font.BOLD, 13));
+    button.setFont(new Font("Arial", Font.BOLD, 11));
     button.setFocusPainted(false);
     button.setBorderPainted(false);
     button.setPreferredSize(new Dimension(170, height));
@@ -661,7 +668,7 @@ public class Gui {
     JPanel panel = new JPanel(new BorderLayout());
     panel.setBorder(BorderFactory.createCompoundBorder(
         BorderFactory.createMatteBorder(2, 0, 0, 0, new Color(60, 60, 62)),
-        BorderFactory.createEmptyBorder(5, 10, 5, 10)));
+        BorderFactory.createEmptyBorder(5, 10, 5, 0)));
     int logHeight = isLaptopSize ? 250 : 300;
     panel.setPreferredSize(new Dimension(0, logHeight));
     panel.setBackground(new Color(18, 18, 18));
@@ -678,6 +685,7 @@ public class Gui {
     // Button panel
     JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
     buttonPanel.setBackground(new Color(18, 18, 18));
+    buttonPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
     JButton clearButton = new JButton("Clear");
     clearButton.setFont(new Font("Arial", Font.PLAIN, 10));
@@ -953,17 +961,39 @@ public class Gui {
       SwingUtilities.invokeLater(() -> {
         try {
           String timeStamp = new SimpleDateFormat("HH:mm:ss").format(new Date());
-          String newMessage = timeStamp + " - " + message + "\n";
+
+          // Add line break after MANUAL_BRIDGE_LIGHTS value
+          String processedMessage = message;
+          int manualLightsIndex = message.indexOf("MANUAL_BRIDGE_LIGHTS:");
+          if (manualLightsIndex != -1) {
+            // Find the end of the MANUAL_BRIDGE_LIGHTS value (either YES or NO)
+            int afterValue = -1;
+            if (message.indexOf("MANUAL_BRIDGE_LIGHTS:YES", manualLightsIndex) != -1) {
+              afterValue = manualLightsIndex + "MANUAL_BRIDGE_LIGHTS:YES".length();
+            } else if (message.indexOf("MANUAL_BRIDGE_LIGHTS:NO", manualLightsIndex) != -1) {
+              afterValue = manualLightsIndex + "MANUAL_BRIDGE_LIGHTS:NO".length();
+            }
+
+            // Insert line break after the value if there's more content
+            if (afterValue != -1 && afterValue < message.length()) {
+              // Check if next character is a pipe separator
+              if (message.charAt(afterValue) == '|') {
+                processedMessage = message.substring(0, afterValue) + "\n    " + message.substring(afterValue + 1);
+              }
+            }
+          }
+
+          String newMessage = timeStamp + " - " + processedMessage + "\n";
 
           StyledDocument doc = messageLogArea.getStyledDocument();
 
           // Change all existing text to light gray
-          Style defaultStyle = messageLogArea.addStyle("Default", null);
+          javax.swing.text.Style defaultStyle = messageLogArea.addStyle("Default", null);
           StyleConstants.setForeground(defaultStyle, new Color(180, 180, 180));
           doc.setCharacterAttributes(0, doc.getLength(), defaultStyle, false);
 
           // Determine color based on message type
-          Style messageStyle = messageLogArea.addStyle("MessageStyle", null);
+          javax.swing.text.Style messageStyle = messageLogArea.addStyle("MessageStyle", null);
           if (message.startsWith("ERROR") || message.startsWith("SYSTEM: communication_lost")) {
             StyleConstants.setForeground(messageStyle, new Color(231, 76, 60));
           } else if (message.startsWith("WARNING")) {
@@ -1196,12 +1226,21 @@ public class Gui {
       g2d.fillRect(-5, waterY - 81, centerX - bridgeWidth + 5, pillarHeight);
       g2d.fillRect(centerX + bridgeWidth, waterY - 81, width - (centerX + bridgeWidth), pillarHeight);
 
-      // Road markings
+      // Road markings - only draw on the solid road sections
       g2d.setColor(new Color(180, 180, 180));
-      for (int i = 40; i < centerX - bridgeWidth; i += 40) {
-        g2d.fillRect(i, waterY - 86, 20, 2);
+
+      // Left side - stop before the bridge/pillar edge
+      int leftRoadEnd = centerX - bridgeWidth - 5; // Stop at pillar edge
+      for (int i = 40; i < leftRoadEnd; i += 40) {
+        // Only draw if the entire marking fits before the edge
+        if (i + 20 <= leftRoadEnd) {
+          g2d.fillRect(i, waterY - 86, 20, 2);
+        }
       }
-      for (int i = centerX + bridgeWidth + 40; i < width; i += 40) {
+
+      // Right side - start after the bridge/pillar edge
+      int rightRoadStart = centerX + bridgeWidth + 5; // Start after pillar edge
+      for (int i = rightRoadStart + 40; i < width; i += 40) {
         g2d.fillRect(i, waterY - 86, 20, 2);
       }
 
