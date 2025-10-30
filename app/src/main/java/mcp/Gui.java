@@ -328,7 +328,7 @@ public class Gui {
         BorderFactory.createLineBorder(Color.WHITE, 3),
         BorderFactory.createEmptyBorder(30, 50, 30, 50)));
 
-    JLabel warningIcon = new JLabel("⚠");
+    JLabel warningIcon = new JLabel("âš ");
     warningIcon.setFont(new Font("Arial", Font.BOLD, 72));
     warningIcon.setForeground(Color.WHITE);
     warningIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -444,7 +444,7 @@ public class Gui {
 
     overrideModeButton.setEnabled(true);
     overrideModeButton.setText("SWITCH TO OVERRIDE MODE");
-    overrideModeButton.setBackground(new Color(60, 60, 62));
+    overrideModeButton.setBackground(new Color(101, 181, 109));
 
     panel.add(automaticModeButton, gbc);
     gbc.gridy = 1;
@@ -464,17 +464,22 @@ public class Gui {
     button.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
     button.addMouseListener(new java.awt.event.MouseAdapter() {
-      Color originalColor = button.getBackground();
+      Color hoverColor = null;
 
       public void mouseEntered(java.awt.event.MouseEvent evt) {
         if (button.isEnabled()) {
-          button.setBackground(color.brighter());
+          hoverColor = button.getBackground();
+          // Create a subtle brightness increase (10% brighter)
+          int r = Math.min(255, (int) (hoverColor.getRed() * 1.1));
+          int g = Math.min(255, (int) (hoverColor.getGreen() * 1.1));
+          int b = Math.min(255, (int) (hoverColor.getBlue() * 1.1));
+          button.setBackground(new Color(r, g, b));
         }
       }
 
       public void mouseExited(java.awt.event.MouseEvent evt) {
-        if (button.isEnabled()) {
-          button.setBackground(originalColor);
+        if (button.isEnabled() && hoverColor != null) {
+          button.setBackground(hoverColor);
         }
       }
     });
@@ -498,7 +503,7 @@ public class Gui {
     gbc.fill = GridBagConstraints.HORIZONTAL;
     gbc.weightx = 1.0;
 
-    Color buttonColor = new Color(60, 60, 62);
+    Color buttonColor = new Color(101, 181, 109);
     int buttonHeight = isLaptopSize ? 28 : 32;
 
     // Emergency Controls Section
@@ -518,7 +523,7 @@ public class Gui {
     emergencyStopButton.addMouseListener(new java.awt.event.MouseAdapter() {
       public void mouseEntered(java.awt.event.MouseEvent evt) {
         if (emergencyStopButton.isEnabled()) {
-          emergencyStopButton.setBackground(new Color(231, 76, 60));
+          emergencyStopButton.setBackground(new Color(210, 63, 50));
         }
       }
 
@@ -968,7 +973,7 @@ public class Gui {
       overrideModeButton.setEnabled(false);
       automaticModeButton.setText("SWITCH TO AUTOMATIC MODE");
       overrideModeButton.setText("CURRENTLY IN OVERRIDE MODE");
-      automaticModeButton.setBackground(new Color(60, 60, 62));
+      automaticModeButton.setBackground(new Color(101, 181, 109));
       overrideModeButton.setBackground(new Color(70, 70, 72));
     } else {
       automaticModeButton.setEnabled(false);
@@ -976,7 +981,7 @@ public class Gui {
       automaticModeButton.setText("CURRENTLY IN AUTOMATIC MODE");
       overrideModeButton.setText("SWITCH TO OVERRIDE MODE");
       automaticModeButton.setBackground(new Color(70, 70, 72));
-      overrideModeButton.setBackground(new Color(60, 60, 62));
+      overrideModeButton.setBackground(new Color(101, 181, 109));
     }
   }
 
