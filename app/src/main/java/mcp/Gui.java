@@ -49,13 +49,17 @@ public class Gui {
   private BridgeAnimationPanel bridgePanel;
   private JPanel controlPanel;
   private JPanel modeControlPanel;
-  private JPanel overlayPanel;
   private JPanel warningPanel;
   private boolean isOverrideMode = false;
   private boolean communicationLost = false;
   private boolean isDiagnosticMode = false;
 
   // Status Display Components
+  private JLabel trafficSequenceLabel;
+  private JLabel systemTestLabel;
+  private JLabel roadLightsLabel;
+  private JLabel boatLightsLabel;
+  private JLabel bridgeLightsLabel;
   private JLabel modeLabel;
   private JLabel bridgeStatusLabel;
   private JLabel gateStatusLabel;
@@ -77,12 +81,6 @@ public class Gui {
   private Send mcpSendObject;
 
   // Current state
-  private String currentMode = "AUTOMATIC";
-  private String bridgeState = "CLOSED";
-  private String gateState = "OPEN";
-  private String roadLight = "RED";
-  private String boatLight = "RED";
-  private String sequenceState = "IDLE";
   private long lastStatusTime = 0;
   private String lastWeightReading = "N/A";
 
@@ -94,16 +92,19 @@ public class Gui {
   // Responsive sizing
   private boolean isLaptopSize = false;
 
+  // Constructor
   public Gui() {
-    SwingUtilities.invokeLater(() -> createGUI());
+    SwingUtilities.invokeLater(this::createGUI);
     startCommunicationMonitor();
   }
 
+  // Update this GUI's sender object
   public void initializeSender(Send sendObject) {
     this.mcpSendObject = sendObject;
     updateMessageLog("Send object initialized - ready for communication");
   }
 
+  // Timer for detecting communication loss
   private void startCommunicationMonitor() {
     communicationCheckTimer = new Timer(1000, e -> {
       long timeSinceLastStatus = System.currentTimeMillis() - lastStatusTime;
@@ -116,13 +117,13 @@ public class Gui {
       } else if (communicationLost && timeSinceLastStatus <= 5000) {
         communicationLost = false;
         updateCommunicationStatus(true);
-        updateMessageLog("SYSTEM: Communication restored");
+        updateMessageLog("SYSTEM: Connected to ESP");
       }
     });
     communicationCheckTimer.start();
 
     // Warning flash timer - flashes the warning panel when communication is lost
-    warningFlashTimer = new Timer(1000, e -> {
+    warningFlashTimer = new Timer(3000, e -> {
       if (communicationLost && warningPanel != null) {
         warningVisible = !warningVisible;
         warningPanel.setVisible(warningVisible);
@@ -146,7 +147,7 @@ public class Gui {
   }
 
   private void createGUI() {
-    System.out.println("Creating GUI window...");
+    System.out.println("Creating GUI window");
 
     frame = new JFrame("Bridge Control Interface");
 
@@ -266,9 +267,9 @@ public class Gui {
     sequenceStateLabel = createStatLabel("State: IDLE");
     roadDistanceLabel = createStatLabel("Road: 0 cm");
     boatDistanceLabel = createStatLabel("Boat: 0 cm");
-    bridgeMovementLabel = createStatLabel("Bridge Sensor: 0 cm");
+    bridgeMovementLabel = createStatLabel("Bridge: 0 cm");
     boatClearanceLabel = createStatLabel("Clearance: 0 cm");
-    manualLightsLabel = createStatLabel("Manual Lights: NO");
+    manualLightsLabel = createStatLabel("Manual Lights: No");
     lastWeightLabel = createStatLabel("Last Weight: N/A");
     queueStatusLabel = createStatLabel("");
 
@@ -303,7 +304,7 @@ public class Gui {
 
   private JLabel createStatLabel(String text) {
     JLabel label = new JLabel(text);
-    label.setFont(new Font("Arial", Font.PLAIN, 11));
+    label.setFont(new Font("Arial", Font.PLAIN, 16));
     label.setForeground(new Color(180, 180, 180));
     label.setAlignmentX(Component.LEFT_ALIGNMENT);
     return label;
@@ -436,6 +437,15 @@ public class Gui {
       }
     });
 
+    // Set initial states - system starts in automatic mode
+    automaticModeButton.setEnabled(false);
+    automaticModeButton.setText("CURRENTLY IN AUTOMATIC MODE");
+    automaticModeButton.setBackground(new Color(70, 70, 72));
+
+    overrideModeButton.setEnabled(true);
+    overrideModeButton.setText("SWITCH TO OVERRIDE MODE");
+    overrideModeButton.setBackground(new Color(60, 60, 62));
+
     panel.add(automaticModeButton, gbc);
     gbc.gridy = 1;
     panel.add(overrideModeButton, gbc);
@@ -540,29 +550,29 @@ public class Gui {
     panel.add(emergencyStopButton, gbc);
 
     // Traffic Sequence Section
-    addSectionLabel(panel, "TRAFFIC SEQUENCES", gbc, 2);
+    trafficSequenceLabel = addSectionLabel(panel, "TRAFFIC SEQUENCES - SWITCH TO OVERRIDE MODE TO ENABLE", gbc, 2);
     addControlButton(panel, "ALLOW BOAT TRAFFIC", buttonColor, "allow_boat_traffic", gbc, 3, buttonHeight);
     addControlButton(panel, "ALLOW ROAD TRAFFIC", buttonColor, "allow_road_traffic", gbc, 4, buttonHeight);
 
     // System Test Section
-    addSectionLabel(panel, "SYSTEM TESTING", gbc, 5);
+    systemTestLabel = addSectionLabel(panel, "SYSTEM TESTING - SWITCH TO OVERRIDE MODE TO ENABLE", gbc, 5);
     addControlButton(panel, "RUN FULL TEST", buttonColor, "run_full_test", gbc, 6, buttonHeight);
     addControlButton(panel, "PERFORM DIAGNOSTICS", buttonColor, "perform_diagnostics", gbc, 7, buttonHeight);
     addControlButton(panel, "RESTART ESP32", new Color(192, 57, 43), "restart", gbc, 8, buttonHeight);
 
     // Road Light Control Section
-    addSectionLabel(panel, "ROAD LIGHTS", gbc, 9);
+    roadLightsLabel = addSectionLabel(panel, "ROAD LIGHTS - SWITCH TO OVERRIDE MODE TO ENABLE", gbc, 9);
     addControlButton(panel, "RED", new Color(231, 76, 60), "road_lights_red", gbc, 10, buttonHeight);
     addControlButton(panel, "YELLOW", new Color(241, 196, 15), "road_lights_yellow", gbc, 11, buttonHeight);
     addControlButton(panel, "GREEN", new Color(46, 204, 113), "road_lights_green", gbc, 12, buttonHeight);
 
     // Boat Light Control Section
-    addSectionLabel(panel, "BOAT LIGHTS", gbc, 13);
+    boatLightsLabel = addSectionLabel(panel, "BOAT LIGHTS - SWITCH TO OVERRIDE MODE TO ENABLE", gbc, 13);
     addControlButton(panel, "RED", new Color(231, 76, 60), "boat_lights_red", gbc, 14, buttonHeight);
     addControlButton(panel, "GREEN", new Color(46, 204, 113), "boat_lights_green", gbc, 15, buttonHeight);
 
     // Bridge Lights Control Section
-    addSectionLabel(panel, "BRIDGE LIGHTS", gbc, 16);
+    bridgeLightsLabel = addSectionLabel(panel, "BRIDGE LIGHTS - SWITCH TO OVERRIDE MODE TO ENABLE", gbc, 16);
 
     gbc.gridy = 17;
     JCheckBox manualControlCheckbox = new JCheckBox("Manual Control");
@@ -611,13 +621,15 @@ public class Gui {
     return panel;
   }
 
-  private void addSectionLabel(JPanel panel, String text, GridBagConstraints gbc, int row) {
+  private JLabel addSectionLabel(JPanel panel, String text, GridBagConstraints gbc, int row) {
     gbc.gridy = row;
     JLabel label = new JLabel(text);
     label.setFont(new Font("Arial", Font.BOLD, 11));
     label.setForeground(new Color(160, 160, 160));
     label.setBorder(BorderFactory.createEmptyBorder(3, 5, 1, 5));
     panel.add(label, gbc);
+    // Return the label
+    return label;
   }
 
   private void addControlButton(JPanel panel, String text, Color color, String command,
@@ -762,6 +774,21 @@ public class Gui {
   }
 
   private void setControlPanelEnabled(boolean enabled) {
+    // Update section labels
+    if (enabled) {
+      trafficSequenceLabel.setText("TRAFFIC SEQUENCES");
+      systemTestLabel.setText("SYSTEM TESTING");
+      roadLightsLabel.setText("ROAD LIGHTS");
+      boatLightsLabel.setText("BOAT LIGHTS");
+      bridgeLightsLabel.setText("BRIDGE LIGHTS");
+    } else {
+      trafficSequenceLabel.setText("TRAFFIC SEQUENCES - SWITCH TO OVERRIDE MODE TO ENABLE");
+      systemTestLabel.setText("SYSTEM TESTING - SWITCH TO OVERRIDE MODE TO ENABLE");
+      roadLightsLabel.setText("ROAD LIGHTS - SWITCH TO OVERRIDE MODE TO ENABLE");
+      boatLightsLabel.setText("BOAT LIGHTS - SWITCH TO OVERRIDE MODE TO ENABLE");
+      bridgeLightsLabel.setText("BRIDGE LIGHTS - SWITCH TO OVERRIDE MODE TO ENABLE");
+    }
+
     Component[] components = controlPanel.getComponents();
     for (Component component : components) {
       if (component instanceof JButton || component instanceof JCheckBox) {
@@ -825,13 +852,6 @@ public class Gui {
     SwingUtilities.invokeLater(() -> {
       lastStatusTime = System.currentTimeMillis();
 
-      this.currentMode = mode;
-      this.bridgeState = bridgeState;
-      this.gateState = gateState;
-      this.roadLight = roadLight;
-      this.boatLight = boatLight;
-      this.sequenceState = sequenceState;
-
       // Update mode label
       modeLabel.setText("Mode: " + mode);
       if (mode.equals("AUTOMATIC")) {
@@ -877,12 +897,12 @@ public class Gui {
       // Update distances
       roadDistanceLabel.setText("Road: " + roadDistance + " cm");
       boatDistanceLabel.setText("Boat: " + boatDistance + " cm");
-      bridgeMovementLabel.setText("Bridge Sensor: " + bridgeMovementDistance + " cm");
+      bridgeMovementLabel.setText("Bridge: " + bridgeMovementDistance + " cm");
       boatClearanceLabel.setText("Clearance: " + boatClearanceDistance + " cm");
 
       // Update manual lights status
       manualLightsLabel.setText("Manual Lights: " + manualBridgeLights);
-      if (manualBridgeLights.equals("YES")) {
+      if (manualBridgeLights.equals("Yes")) {
         manualLightsLabel.setForeground(new Color(241, 196, 15));
       } else {
         manualLightsLabel.setForeground(new Color(180, 180, 180));
@@ -946,11 +966,15 @@ public class Gui {
     if (isOverrideMode) {
       automaticModeButton.setEnabled(true);
       overrideModeButton.setEnabled(false);
+      automaticModeButton.setText("SWITCH TO AUTOMATIC MODE");
+      overrideModeButton.setText("CURRENTLY IN OVERRIDE MODE");
       automaticModeButton.setBackground(new Color(60, 60, 62));
       overrideModeButton.setBackground(new Color(70, 70, 72));
     } else {
       automaticModeButton.setEnabled(false);
       overrideModeButton.setEnabled(true);
+      automaticModeButton.setText("CURRENTLY IN AUTOMATIC MODE");
+      overrideModeButton.setText("SWITCH TO OVERRIDE MODE");
       automaticModeButton.setBackground(new Color(70, 70, 72));
       overrideModeButton.setBackground(new Color(60, 60, 62));
     }
