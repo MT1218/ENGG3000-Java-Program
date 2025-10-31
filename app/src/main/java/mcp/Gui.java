@@ -29,6 +29,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -304,7 +305,7 @@ public class Gui {
 
   private JLabel createStatLabel(String text) {
     JLabel label = new JLabel(text);
-    label.setFont(new Font("Arial", Font.PLAIN, 16));
+    label.setFont(new Font("Arial", Font.PLAIN, 14));
     label.setForeground(new Color(180, 180, 180));
     label.setAlignmentX(Component.LEFT_ALIGNMENT);
     return label;
@@ -385,7 +386,56 @@ public class Gui {
     scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
     scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
     scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-    scrollPane.getViewport().setBackground(new Color(28, 28, 30));
+
+    // Customize scrollbar colors
+    scrollPane.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
+      @Override
+      protected void configureScrollBarColors() {
+        this.thumbColor = new Color(130, 130, 130);
+        this.trackColor = new Color(235, 236, 240);
+        this.thumbHighlightColor = new Color(160, 160, 160);
+        this.thumbDarkShadowColor = new Color(130, 130, 130);
+        this.thumbLightShadowColor = new Color(130, 130, 130);
+      }
+
+      @Override
+      protected void paintThumb(Graphics g, JComponent c, java.awt.Rectangle thumbBounds) {
+        if (thumbBounds.isEmpty() || !scrollbar.isEnabled()) {
+          return;
+        }
+
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // Check if mouse is over the thumb
+        java.awt.Point mousePos = c.getMousePosition();
+        boolean isHovered = mousePos != null && thumbBounds.contains(mousePos);
+
+        g2.setColor(isHovered ? new Color(160, 160, 160) : new Color(130, 130, 130));
+        g2.fillRoundRect(thumbBounds.x + 2, thumbBounds.y + 2,
+            thumbBounds.width - 4, thumbBounds.height - 4, 6, 6);
+
+        g2.dispose();
+      }
+
+      @Override
+      protected JButton createDecreaseButton(int orientation) {
+        return createZeroButton();
+      }
+
+      @Override
+      protected JButton createIncreaseButton(int orientation) {
+        return createZeroButton();
+      }
+
+      private JButton createZeroButton() {
+        JButton button = new JButton();
+        button.setPreferredSize(new Dimension(0, 0));
+        button.setMinimumSize(new Dimension(0, 0));
+        button.setMaximumSize(new Dimension(0, 0));
+        return button;
+      }
+    });
 
     rightPanel.add(scrollPane, BorderLayout.CENTER);
 
@@ -457,7 +507,11 @@ public class Gui {
     JButton button = new JButton(text);
     button.setBackground(color);
     button.setForeground(new Color(220, 220, 220));
-    button.setFont(new Font("Arial", Font.BOLD, 11));
+    if (isLaptopSize) {
+      button.setFont(new Font("Arial", Font.BOLD, 10));
+    } else {
+      button.setFont(new Font("Arial", Font.BOLD, 11));
+    }
     button.setFocusPainted(false);
     button.setBorderPainted(false);
     button.setPreferredSize(new Dimension(170, height));
@@ -629,7 +683,11 @@ public class Gui {
   private JLabel addSectionLabel(JPanel panel, String text, GridBagConstraints gbc, int row) {
     gbc.gridy = row;
     JLabel label = new JLabel(text);
-    label.setFont(new Font("Arial", Font.BOLD, 11));
+    if (isLaptopSize) {
+      label.setFont(new Font("Arial", Font.BOLD, 9));
+    } else {
+      label.setFont(new Font("Arial", Font.BOLD, 11));
+    }
     label.setForeground(new Color(160, 160, 160));
     label.setBorder(BorderFactory.createEmptyBorder(3, 5, 1, 5));
     panel.add(label, gbc);
@@ -643,7 +701,11 @@ public class Gui {
     JButton button = new JButton(text);
     button.setBackground(color);
     button.setForeground(Color.WHITE);
-    button.setFont(new Font("Arial", Font.BOLD, 11));
+    if (isLaptopSize) {
+      button.setFont(new Font("Arial", Font.BOLD, 10));
+    } else {
+      button.setFont(new Font("Arial", Font.BOLD, 11));
+    }
     button.setFocusPainted(false);
     button.setBorderPainted(false);
     button.setPreferredSize(new Dimension(170, height));
@@ -730,7 +792,12 @@ public class Gui {
 
     messageLogArea = new JTextPane();
     messageLogArea.setEditable(false);
-    messageLogArea.setFont(new Font("Consolas", Font.PLAIN, 10));
+    if (isLaptopSize) {
+      messageLogArea.setFont(new Font("Consolas", Font.PLAIN, 12));
+    } else {
+      messageLogArea.setFont(new Font("Consolas", Font.PLAIN, 14));
+    }
+
     messageLogArea.setBackground(new Color(18, 18, 18));
     messageLogArea.setForeground(new Color(180, 180, 180));
     messageLogArea.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
@@ -738,6 +805,56 @@ public class Gui {
     JScrollPane scrollPane = new JScrollPane(messageLogArea);
     scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
     scrollPane.setBorder(null);
+
+    // Customize scrollbar colors
+    scrollPane.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
+      @Override
+      protected void configureScrollBarColors() {
+        this.thumbColor = new Color(130, 130, 130);
+        this.trackColor = new Color(235, 236, 240);
+        this.thumbHighlightColor = new Color(160, 160, 160);
+        this.thumbDarkShadowColor = new Color(130, 130, 130);
+        this.thumbLightShadowColor = new Color(130, 130, 130);
+      }
+
+      @Override
+      protected void paintThumb(Graphics g, JComponent c, java.awt.Rectangle thumbBounds) {
+        if (thumbBounds.isEmpty() || !scrollbar.isEnabled()) {
+          return;
+        }
+
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // Check if mouse is over the thumb
+        java.awt.Point mousePos = c.getMousePosition();
+        boolean isHovered = mousePos != null && thumbBounds.contains(mousePos);
+
+        g2.setColor(isHovered ? new Color(160, 160, 160) : new Color(130, 130, 130));
+        g2.fillRoundRect(thumbBounds.x + 2, thumbBounds.y + 2,
+            thumbBounds.width - 4, thumbBounds.height - 4, 6, 6);
+
+        g2.dispose();
+      }
+
+      @Override
+      protected JButton createDecreaseButton(int orientation) {
+        return createZeroButton();
+      }
+
+      @Override
+      protected JButton createIncreaseButton(int orientation) {
+        return createZeroButton();
+      }
+
+      private JButton createZeroButton() {
+        JButton button = new JButton();
+        button.setPreferredSize(new Dimension(0, 0));
+        button.setMinimumSize(new Dimension(0, 0));
+        button.setMaximumSize(new Dimension(0, 0));
+        return button;
+      }
+    });
 
     panel.add(headerPanel, BorderLayout.NORTH);
     panel.add(scrollPane, BorderLayout.CENTER);
@@ -1422,8 +1539,8 @@ public class Gui {
     }
 
     private void drawTrafficLights(Graphics2D g2d, int centerX, int waterY) {
-      drawTrafficLightPole(g2d, centerX - 290, waterY - 81, roadLight, true);
-      drawTrafficLightPole(g2d, centerX + 290, waterY - 81, boatLight, false);
+      drawTrafficLightPole(g2d, centerX - 285, waterY - 81, roadLight, true);
+      drawTrafficLightPole(g2d, centerX + 285, waterY - 81, boatLight, false);
     }
 
     private void drawTrafficLightPole(Graphics2D g2d, int x, int y, String activeLight, boolean isRoadLight) {
