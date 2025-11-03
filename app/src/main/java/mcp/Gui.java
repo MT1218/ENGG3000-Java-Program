@@ -829,7 +829,12 @@ public class Gui {
     button.addMouseListener(new java.awt.event.MouseAdapter() {
       public void mouseEntered(java.awt.event.MouseEvent evt) {
         if (button.isEnabled()) {
-          button.setBackground(color.brighter());
+          Color originalColor = (Color) button.getClientProperty("originalColor");
+          // Create a subtle brightness increase (10% brighter)
+          int r = Math.min(255, (int) (originalColor.getRed() * 1.1));
+          int g = Math.min(255, (int) (originalColor.getGreen() * 1.1));
+          int b = Math.min(255, (int) (originalColor.getBlue() * 1.1));
+          button.setBackground(new Color(r, g, b));
         }
       }
 
@@ -887,6 +892,16 @@ public class Gui {
     clearButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
     clearButton.addActionListener(e -> clearMessageLog());
 
+    clearButton.addMouseListener(new java.awt.event.MouseAdapter() {
+      public void mouseEntered(java.awt.event.MouseEvent evt) {
+        clearButton.setBackground(new Color(211, 63, 47));
+      }
+
+      public void mouseExited(java.awt.event.MouseEvent evt) {
+        clearButton.setBackground(new Color(192, 57, 43));
+      }
+    });
+
     JButton exportButton = new JButton("Export");
     exportButton.setFont(new Font("Arial", Font.PLAIN, 10));
     exportButton.setBackground(new Color(52, 152, 219));
@@ -895,6 +910,16 @@ public class Gui {
     exportButton.setBorderPainted(false);
     exportButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
     exportButton.addActionListener(e -> exportMessageLog());
+
+    exportButton.addMouseListener(new java.awt.event.MouseAdapter() {
+      public void mouseEntered(java.awt.event.MouseEvent evt) {
+        exportButton.setBackground(new Color(57, 167, 241));
+      }
+
+      public void mouseExited(java.awt.event.MouseEvent evt) {
+        exportButton.setBackground(new Color(52, 152, 219));
+      }
+    });
 
     buttonPanel.add(clearButton);
     buttonPanel.add(exportButton);
