@@ -87,8 +87,7 @@ public class Gui {
 
   // Communication timeout timer
   private Timer communicationCheckTimer;
-  private Timer warningFlashTimer;
-  private boolean warningVisible = true;
+  private JComponent communicationLostPane;
 
   // Responsive sizing
   private boolean isLaptopSize = false;
@@ -122,27 +121,16 @@ public class Gui {
       }
     });
     communicationCheckTimer.start();
-
-    // Warning flash timer - flashes the warning panel when communication is lost
-    warningFlashTimer = new Timer(3000, e -> {
-      if (communicationLost && warningPanel != null) {
-        warningVisible = !warningVisible;
-        warningPanel.setVisible(warningVisible);
-        warningPanel.repaint();
-      } else if (!communicationLost && warningPanel != null) {
-        // Ensure warning is hidden when communication is restored
-        warningPanel.setVisible(false);
-        warningPanel.repaint();
-      }
-    });
-    warningFlashTimer.start();
   }
 
   private void updateCommunicationStatus(boolean connected) {
     SwingUtilities.invokeLater(() -> {
       if (connected) {
         warningPanel.setVisible(false);
-        warningVisible = false;
+        communicationLostPane.setVisible(false);
+      } else {
+        warningPanel.setVisible(true);
+        communicationLostPane.setVisible(true);
       }
     });
   }
@@ -190,6 +178,20 @@ public class Gui {
     frame.add(centerArea, BorderLayout.CENTER);
     frame.add(rightPanel, BorderLayout.EAST);
     frame.add(bottomPanel, BorderLayout.SOUTH);
+
+    // Setup glass pane to block interactions when communication is lost
+    communicationLostPane = (JComponent) frame.getGlassPane();
+    communicationLostPane.setOpaque(false);
+    communicationLostPane.addMouseListener(new java.awt.event.MouseAdapter() {
+      // Consume all mouse events when glass pane is visible
+    });
+    communicationLostPane.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+      // Consume all mouse motion events when glass pane is visible
+    });
+    communicationLostPane.addKeyListener(new java.awt.event.KeyAdapter() {
+      // Consume all key events when glass pane is visible
+    });
+    communicationLostPane.setVisible(false);
 
     // Add resize listener for responsiveness
     frame.addComponentListener(new ComponentAdapter() {
@@ -329,12 +331,12 @@ public class Gui {
         BorderFactory.createLineBorder(Color.WHITE, 3),
         BorderFactory.createEmptyBorder(30, 50, 30, 50)));
 
-    JLabel warningIcon = new JLabel("âš ");
+    JLabel warningIcon = new JLabel("COMMUNICATION LOST");
     warningIcon.setFont(new Font("Arial", Font.BOLD, 72));
     warningIcon.setForeground(Color.WHITE);
     warningIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-    JLabel warningLabel = new JLabel("COMMUNICATION LOST");
+    JLabel warningLabel = new JLabel("Lost connection with ESP, attempting reconnection");
     warningLabel.setFont(new Font("Arial", Font.BOLD, 32));
     warningLabel.setForeground(Color.WHITE);
     warningLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -1006,7 +1008,12 @@ public class Gui {
       boolean wasDiagnostic = isDiagnosticMode;
       isDiagnosticMode = sequenceState.equals("DIAGNOSTIC");
 
-      sequenceStateLabel.setText("State: " + sequenceState);
+      if (isLaptopSize) {
+        sequenceStateLabel.setText("State: " + sequenceState);
+      } else {
+        sequenceStateLabel.setText("State: " + "\n" + sequenceState);
+      }
+
       if (sequenceState.equals("DIAGNOSTIC")) {
         sequenceStateLabel.setForeground(new Color(231, 76, 60));
       } else if (sequenceState.equals("IDLE") || sequenceState.equals("CARS_PASSING")
