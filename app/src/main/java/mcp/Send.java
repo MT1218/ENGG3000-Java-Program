@@ -11,10 +11,16 @@ public class Send {
   private DatagramSocket espSendSocket;
   private int espSendPortNumber;
   InetAddress espSendIpAddr;
+  private Gui userInterface;
+  private boolean sendNotifications = false;
 
   // Constructor to set destination port/ipaddr variables and initialise
   // espSendSocket
-  Send(int espSendPortNumber, String espSendIpAddr) {
+  Send(int espSendPortNumber, String espSendIpAddr, Gui userInterface) {
+    if (userInterface != null) {
+      this.userInterface = userInterface;
+      sendNotifications = true;
+    }
     this.espSendPortNumber = espSendPortNumber;
     try {
       this.espSendIpAddr = InetAddress.getByName(espSendIpAddr);
@@ -34,6 +40,10 @@ public class Send {
 
       DatagramPacket sendPacket = new DatagramPacket(sendBuffer, sendBuffer.length, espSendIpAddr, espSendPortNumber);
       espSendSocket.send(sendPacket);
+
+      if (sendNotifications) {
+        userInterface.showNotification("Sent message to esp: " + message);
+      }
 
       System.out.println("Sent message to esp: " + message);
     } catch (IOException e) {

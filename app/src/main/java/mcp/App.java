@@ -16,9 +16,9 @@ public class App {
     receiveThread.start();
 
     // Create the object to send GUI messages
-    Send guiSendObject = new Send(SEND_PORT_NUMBER, SEND_IP_ADDR);
+    Send guiSendObject = new Send(SEND_PORT_NUMBER, SEND_IP_ADDR, userInterface);
     // Create the object to send heartbeat messages
-    Send heartBeatSendObject = new Send(SEND_PORT_NUMBER, SEND_IP_ADDR);
+    Send heartBeatSendObject = new Send(SEND_PORT_NUMBER, SEND_IP_ADDR, null);
 
     // Initialise the GUI with the send object
     userInterface.initializeSender(guiSendObject);

@@ -63,54 +63,34 @@ public class Receive extends Thread {
             userInterface.updateMessageLog("RECEIVED: WEIGHT_CHECK: " + weight);
           }
         }
+        // Handle EMERGENCY_STOP messages
+        else if (receivedMessage.startsWith("EMERGENCY_STOP:") || receivedMessage.startsWith("EMERGENCY_STOP :")) {
+          handleEmergencyStop(receivedMessage);
+        }
         // Handle MODE_CHANGE messages
         else if (receivedMessage.startsWith("MODE_CHANGE:") || receivedMessage.startsWith("MODE_CHANGE :")) {
-          int colonIndex = receivedMessage.indexOf(":");
-          if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
-            String message = receivedMessage.substring(colonIndex + 1).trim();
-            userInterface.updateMessageLog("RECEIVED: MODE_CHANGE: " + message);
-          }
+          handleModeChange(receivedMessage);
         }
         // Handle INFO messages
         else if (receivedMessage.startsWith("INFO:") || receivedMessage.startsWith("INFO :")) {
-          int colonIndex = receivedMessage.indexOf(":");
-          if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
-            String message = receivedMessage.substring(colonIndex + 1).trim();
-            userInterface.updateMessageLog("RECEIVED: INFO: " + message);
-          }
+          handleInfoMessage(receivedMessage);
         }
         // Handle WARNING messages
         else if (receivedMessage.startsWith("WARNING:") || receivedMessage.startsWith("WARNING :")) {
-          int colonIndex = receivedMessage.indexOf(":");
-          if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
-            String message = receivedMessage.substring(colonIndex + 1).trim();
-            userInterface.updateMessageLog("RECEIVED: WARNING: " + message);
-          }
+          handleWarningMessage(receivedMessage);
         }
         // Handle ERROR messages
         else if (receivedMessage.startsWith("ERROR:") || receivedMessage.startsWith("ERROR :")) {
-          int colonIndex = receivedMessage.indexOf(":");
-          if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
-            String message = receivedMessage.substring(colonIndex + 1).trim();
-            userInterface.updateMessageLog("RECEIVED: ERROR: " + message);
-          }
+          handleErrorMessage(receivedMessage);
         }
         // Handle COMMAND_EXECUTION messages
         else if (receivedMessage.startsWith("COMMAND_EXECUTION:")
             || receivedMessage.startsWith("COMMAND_EXECUTION :")) {
-          int colonIndex = receivedMessage.indexOf(":");
-          if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
-            String message = receivedMessage.substring(colonIndex + 1).trim();
-            userInterface.updateMessageLog("RECEIVED: EXECUTED: " + message);
-          }
+          handleCommandExecution(receivedMessage);
         }
         // Handle SYSTEM_UPDATE messages
         else if (receivedMessage.startsWith("SYSTEM_UPDATE:") || receivedMessage.startsWith("SYSTEM_UPDATE :")) {
-          int colonIndex = receivedMessage.indexOf(":");
-          if (colonIndex != -1 && colonIndex + 1 < receivedMessage.length()) {
-            String message = receivedMessage.substring(colonIndex + 1).trim();
-            userInterface.updateMessageLog("RECEIVED: SYSTEM: " + message);
-          }
+          handleSystemUpdate(receivedMessage);
         }
         // Handle other messages
         else {
@@ -125,6 +105,191 @@ public class Receive extends Thread {
         System.out.println("Unexpected error in receive: " + e.getMessage());
         e.printStackTrace();
       }
+    }
+  }
+
+  private void handleEmergencyStop(String message) {
+    int colonIndex = message.indexOf(":");
+    if (colonIndex != -1 && colonIndex + 1 < message.length()) {
+      String content = message.substring(colonIndex + 1).trim();
+
+      if (content.contains("activated")) {
+        String notificationText = "EMERGENCY STOP ACTIVATED";
+        userInterface.showNotification(notificationText);
+        userInterface.updateMessageLog(
+            "EMERGENCY STOP: System emergency stop has been activated - Mode: Override, State: Diagnostic");
+      }
+    }
+  }
+
+  private void handleModeChange(String message) {
+    int colonIndex = message.indexOf(":");
+    if (colonIndex != -1 && colonIndex + 1 < message.length()) {
+      String content = message.substring(colonIndex + 1).trim();
+
+      if (content.equals("override_mode_active")) {
+        userInterface.showNotification("Mode changed to OVERRIDE");
+        userInterface.updateMessageLog("MODE_CHANGE: Successfully switched to override mode");
+      } else if (content.equals("automatic_mode_active")) {
+        userInterface.showNotification("Mode changed to AUTOMATIC");
+        userInterface.updateMessageLog("MODE_CHANGE: Successfully switched to automatic mode");
+      } else if (content.equals("mode_change_completed")) {
+        userInterface.showNotification("Mode change successful");
+        userInterface.updateMessageLog("MODE_CHANGE: Mode change completed successfully");
+      } else {
+        userInterface.updateMessageLog("RECEIVED: MODE_CHANGE: " + content);
+      }
+    }
+  }
+
+  private void handleInfoMessage(String message) {
+    int colonIndex = message.indexOf(":");
+    if (colonIndex != -1 && colonIndex + 1 < message.length()) {
+      String content = message.substring(colonIndex + 1).trim();
+
+      if (content.contains("mode_change_queued")) {
+        userInterface.showNotification("Mode change queued - waiting for safe state");
+        userInterface.updateMessageLog("INFO: Mode change request queued, waiting for bridge to reach safe state");
+      } else if (content.contains("full_test_starting")) {
+        userInterface.showNotification("Full system test starting");
+        userInterface.updateMessageLog("INFO: Full system test sequence initiated - please standby");
+      } else if (content.contains("test_phase")) {
+        // Parse test phase info
+        String phase = extractValue(content, "PHASE:");
+        String action = extractValue(content, "ACTION:");
+        userInterface.showNotification("Test Phase " + phase + " - " + action);
+        userInterface.updateMessageLog("INFO: Performing Test Phase " + phase + " - Action: " + action);
+      } else {
+        userInterface.updateMessageLog("RECEIVED: INFO: " + content);
+      }
+    }
+  }
+
+  private void handleWarningMessage(String message) {
+    int colonIndex = message.indexOf(":");
+    if (colonIndex != -1 && colonIndex + 1 < message.length()) {
+      String content = message.substring(colonIndex + 1).trim();
+
+      if (content.contains("command_queue_full")) {
+        String queueSize = extractValue(content, "SIZE:");
+        userInterface.showNotification("Command queue full (" + queueSize + ") - please wait");
+        userInterface.updateMessageLog(
+            "WARNING: Command queue is full (Size: " + queueSize + ") - wait for operations to complete");
+      } else {
+        userInterface.showNotification(content);
+        userInterface.updateMessageLog("RECEIVED: WARNING: " + content);
+      }
+    }
+  }
+
+  private void handleErrorMessage(String message) {
+    int colonIndex = message.indexOf(":");
+    if (colonIndex != -1 && colonIndex + 1 < message.length()) {
+      String content = message.substring(colonIndex + 1).trim();
+
+      if (content.contains("override_denied_traffic_present")) {
+        userInterface.showNotification("Cannot enter override - traffic present");
+        userInterface.updateMessageLog("ERROR: Override mode denied - Clear all traffic before switching modes");
+      } else if (content.contains("mode_change_timeout")) {
+        userInterface.showNotification("Mode change timeout");
+        userInterface.updateMessageLog("ERROR: Mode change request timed out - please try again");
+      } else if (content.contains("bridge_opening_failed")) {
+        userInterface.showNotification("Bridge failed to open");
+        userInterface.updateMessageLog("ERROR: Bridge opening operation failed - unknown error occurred");
+      } else if (content.contains("bridge_closing_failed")) {
+        userInterface.showNotification("Bridge failed to close");
+        userInterface.updateMessageLog("ERROR: Bridge closing operation failed - unknown error occurred");
+      } else if (content.contains("bridge_unknown_state")) {
+        userInterface.showNotification("Bridge in unknown state");
+        userInterface.updateMessageLog("ERROR: Bridge is now in an unknown state - diagnostics required");
+      } else if (content.contains("test_failed")) {
+        String phase = extractValue(content, "PHASE:");
+        String reason = extractValue(content, "REASON:");
+        userInterface.showNotification("Test Phase " + phase + " failed - " + reason);
+        userInterface.updateMessageLog("ERROR: Test Phase " + phase + " failed - Reason: " + reason);
+      } else {
+        userInterface.showNotification(content);
+        userInterface.updateMessageLog("RECEIVED: ERROR: " + content);
+      }
+    }
+  }
+
+  private void handleCommandExecution(String message) {
+    int colonIndex = message.indexOf(":");
+    if (colonIndex != -1 && colonIndex + 1 < message.length()) {
+      String content = message.substring(colonIndex + 1).trim();
+
+      if (content.equals("allow_boat_traffic")) {
+        userInterface.showNotification("Boat traffic sequence initiated");
+        userInterface.updateMessageLog("COMMAND_EXECUTION: allow_boat_traffic command executed successfully");
+      } else if (content.equals("allow_road_traffic")) {
+        userInterface.showNotification("Road traffic sequence initiated");
+        userInterface.updateMessageLog("COMMAND_EXECUTION: allow_road_traffic command executed successfully");
+      } else if (content.equals("run_full_test_success")) {
+        userInterface.showNotification("All tests completed successfully");
+        userInterface.updateMessageLog("COMMAND_EXECUTION: Full system test completed - all phases passed");
+      } else {
+        userInterface.updateMessageLog("RECEIVED: EXECUTED: " + content);
+      }
+    }
+  }
+
+  private void handleSystemUpdate(String message) {
+    int colonIndex = message.indexOf(":");
+    if (colonIndex != -1 && colonIndex + 1 < message.length()) {
+      String content = message.substring(colonIndex + 1).trim();
+
+      if (content.contains("bridge_is_executing_sequence")) {
+        userInterface.showNotification("Bridge executing sequence - please wait");
+        userInterface.updateMessageLog("SYSTEM_UPDATE: Bridge is currently executing a sequence - wait for completion");
+      } else if (content.equals("restarting")) {
+        userInterface.showNotification("Bridge system restarting");
+        userInterface.updateMessageLog("SYSTEM_UPDATE: ESP32 system restart initiated");
+      } else if (content.equals("restart_required")) {
+        userInterface.showNotification("Restart required");
+        userInterface
+            .updateMessageLog("SYSTEM_UPDATE: System restart required - no operations will execute until restart");
+      } else if (content.contains("diagnostics_command_only")) {
+        userInterface.showNotification("Diagnostics required - bridge state unknown");
+        userInterface.updateMessageLog(
+            "SYSTEM_UPDATE: Please run diagnostics - bridge state unknown, no other commands accepted");
+      } else if (content.contains("diagnostic_mode")) {
+        userInterface.showNotification("Diagnostic mode active");
+        userInterface.updateMessageLog("SYSTEM_UPDATE: System entered diagnostic mode - determining bridge state");
+      } else if (content.equals("recovered")) {
+        userInterface.showNotification("Bridge state recovered");
+        userInterface
+            .updateMessageLog("SYSTEM_UPDATE: Bridge state successfully determined - normal operations resumed");
+      } else if (content.contains("bridge_state_mismatch")) {
+        userInterface.showNotification("Bridge state mismatch detected");
+        userInterface
+            .updateMessageLog("SYSTEM_UPDATE: Bridge state does not match expected state - verification in progress");
+      } else if (content.contains("detected_boats_while_closing")) {
+        userInterface.showNotification("Boats detected - reopening bridge");
+        userInterface
+            .updateMessageLog("SYSTEM_UPDATE: Boats detected during bridge closing - returning to BOATS_PASSING state");
+      } else if (content.contains("bridge_overloaded")) {
+        userInterface.showNotification("Bridge overloaded - skipping open");
+        userInterface.updateMessageLog(
+            "SYSTEM_UPDATE: Excessive weight detected on bridge - skipping open operation for safety");
+      } else {
+        userInterface.updateMessageLog("RECEIVED: SYSTEM: " + content);
+      }
+    }
+  }
+
+  private String extractValue(String content, String key) {
+    int keyIndex = content.indexOf(key);
+    if (keyIndex == -1)
+      return "";
+
+    int startIndex = keyIndex + key.length();
+    int endIndex = content.indexOf("|", startIndex);
+
+    if (endIndex == -1) {
+      return content.substring(startIndex).trim();
+    } else {
+      return content.substring(startIndex, endIndex).trim();
     }
   }
 

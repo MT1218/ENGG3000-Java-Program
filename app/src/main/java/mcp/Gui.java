@@ -51,6 +51,12 @@ public class Gui {
   private JPanel controlPanel;
   private JPanel modeControlPanel;
   private JPanel warningPanel;
+  private JPanel notificationPanel;
+  private JLabel notificationLabel;
+  private Timer notificationTimer;
+  private Timer notificationSlideTimer;
+  private int notificationY = -100;
+  private int notificationTargetY = 10;
   private boolean isOverrideMode = false;
   private boolean communicationLost = false;
   private boolean isDiagnosticMode = false;
@@ -204,6 +210,9 @@ public class Gui {
     frame.setLocationRelativeTo(null);
     frame.setVisible(true);
 
+    // Create notification panel after frame is visible
+    createNotificationPanel();
+
     System.out.println("GUI window should now be visible");
   }
 
@@ -211,6 +220,13 @@ public class Gui {
     int width = frame.getWidth();
     boolean wasLaptopSize = isLaptopSize;
     isLaptopSize = width < 1600;
+
+    // Update notification panel width
+    if (notificationPanel != null) {
+      int panelWidth = width / 2;
+      int panelX = (width - panelWidth) / 2;
+      notificationPanel.setBounds(panelX, notificationY, panelWidth, 70);
+    }
 
     if (wasLaptopSize != isLaptopSize) {
       // Adjust font sizes and component sizes if needed
@@ -361,6 +377,100 @@ public class Gui {
 
     centerPanel.add(layeredPanel, BorderLayout.CENTER);
     return centerPanel;
+  }
+
+  private void createNotificationPanel() {
+    // Create notification panel
+    notificationPanel = new JPanel(new BorderLayout());
+    notificationPanel.setBackground(new Color(60, 60, 62));
+    notificationPanel.setBorder(BorderFactory.createCompoundBorder(
+        BorderFactory.createLineBorder(new Color(100, 100, 102), 2),
+        BorderFactory.createEmptyBorder(15, 30, 15, 30)));
+
+    notificationLabel = new JLabel("");
+    notificationLabel.setFont(new Font("Arial", Font.BOLD, 16));
+    notificationLabel.setForeground(new Color(220, 220, 220));
+    notificationLabel.setHorizontalAlignment(JLabel.CENTER);
+
+    notificationPanel.add(notificationLabel, BorderLayout.CENTER);
+    notificationPanel.setVisible(false);
+
+    // Add to layered pane so it appears on top of everything
+    frame.getLayeredPane().add(notificationPanel, javax.swing.JLayeredPane.MODAL_LAYER);
+    int panelWidth = frame.getWidth() / 3;
+    int panelX = (frame.getWidth() - panelWidth) / 2;
+    notificationPanel.setBounds(panelX, notificationY, panelWidth, 70);
+  }
+
+  public void showNotification(String message) {
+    SwingUtilities.invokeLater(() -> {
+      // Stop any existing notification animations/timers
+      if (notificationTimer != null && notificationTimer.isRunning()) {
+        notificationTimer.stop();
+      }
+      if (notificationSlideTimer != null && notificationSlideTimer.isRunning()) {
+        notificationSlideTimer.stop();
+      }
+
+      // If a notification is already visible, slide it out first
+      if (notificationPanel.isVisible()) {
+        slideOutNotification(() -> {
+          // After sliding out, show the new notification
+          displayNewNotification(message);
+        });
+      } else {
+        // No notification visible, show immediately
+        displayNewNotification(message);
+      }
+    });
+  }
+
+  private void displayNewNotification(String message) {
+    notificationLabel.setText(message);
+    notificationPanel.setVisible(true);
+    notificationY = -70;
+
+    // Update width in case frame was resized
+    int panelWidth = frame.getWidth() / 3;
+    int panelX = (frame.getWidth() - panelWidth) / 2;
+    notificationPanel.setBounds(panelX, notificationY, panelWidth, 70);
+
+    // Slide in animation
+    notificationSlideTimer = new Timer(10, e -> {
+      notificationY += 3;
+      if (notificationY >= notificationTargetY) {
+        notificationY = notificationTargetY;
+        notificationSlideTimer.stop();
+
+        // Start timer to hide notification after 5 seconds
+        notificationTimer = new Timer(5000, evt -> {
+          slideOutNotification(null);
+        });
+        notificationTimer.setRepeats(false);
+        notificationTimer.start();
+      }
+      notificationPanel.setBounds(panelX, notificationY, panelWidth, 70);
+    });
+    notificationSlideTimer.start();
+  }
+
+  private void slideOutNotification(Runnable onComplete) {
+    int panelWidth = frame.getWidth() / 3;
+    int panelX = (frame.getWidth() - panelWidth) / 2;
+    notificationSlideTimer = new Timer(10, e -> {
+      notificationY -= 3;
+      if (notificationY <= -70) {
+        notificationY = -70;
+        notificationSlideTimer.stop();
+        notificationPanel.setVisible(false);
+
+        if (onComplete != null) {
+          onComplete.run();
+        }
+      }
+      notificationPanel.setBounds(panelX, notificationY, panelWidth, 70);
+    });
+    notificationSlideTimer.start();
   }
 
   private JPanel createRightPanel() {
@@ -623,14 +733,14 @@ public class Gui {
 
     // Road Light Control Section
     roadLightsLabel = addSectionLabel(panel, "ROAD LIGHTS - SWITCH TO OVERRIDE MODE TO ENABLE", gbc, 9);
-    addControlButton(panel, "RED", new Color(231, 76, 60), "road_lights_red", gbc, 10, buttonHeight);
-    addControlButton(panel, "YELLOW", new Color(241, 196, 15), "road_lights_yellow", gbc, 11, buttonHeight);
-    addControlButton(panel, "GREEN", new Color(46, 204, 113), "road_lights_green", gbc, 12, buttonHeight);
+    addControlButton(panel, "RED", new Color(192, 57, 43), "road_lights_red", gbc, 10, buttonHeight);
+    addControlButton(panel, "YELLOW", new Color(230, 176, 5), "road_lights_yellow", gbc, 11, buttonHeight);
+    addControlButton(panel, "GREEN", buttonColor, "road_lights_green", gbc, 12, buttonHeight);
 
     // Boat Light Control Section
     boatLightsLabel = addSectionLabel(panel, "BOAT LIGHTS - SWITCH TO OVERRIDE MODE TO ENABLE", gbc, 13);
-    addControlButton(panel, "RED", new Color(231, 76, 60), "boat_lights_red", gbc, 14, buttonHeight);
-    addControlButton(panel, "GREEN", new Color(46, 204, 113), "boat_lights_green", gbc, 15, buttonHeight);
+    addControlButton(panel, "RED", new Color(192, 57, 43), "boat_lights_red", gbc, 14, buttonHeight);
+    addControlButton(panel, "GREEN", buttonColor, "boat_lights_green", gbc, 15, buttonHeight);
 
     // Bridge Lights Control Section
     bridgeLightsLabel = addSectionLabel(panel, "BRIDGE LIGHTS - SWITCH TO OVERRIDE MODE TO ENABLE", gbc, 16);
@@ -654,7 +764,7 @@ public class Gui {
     manualControlCheckbox.setEnabled(false);
     panel.add(manualControlCheckbox, gbc);
 
-    addControlButton(panel, "LIGHTS ON", new Color(255, 193, 7), "manual_bridge_lights_on", gbc, 18, buttonHeight);
+    addControlButton(panel, "LIGHTS ON", new Color(230, 176, 5), "manual_bridge_lights_on", gbc, 18, buttonHeight);
     addControlButton(panel, "LIGHTS OFF", new Color(100, 100, 100), "manual_bridge_lights_off", gbc, 19, buttonHeight);
 
     // Initially disable all buttons (automatic mode) - disable directly on this
@@ -1083,7 +1193,7 @@ public class Gui {
     SwingUtilities.invokeLater(() -> {
       lastWeightReading = weight;
       lastWeightLabel.setText("Last Weight: " + weight);
-      if (Integer.parseInt(weight) > 2240) {
+      if (Integer.parseInt(weight) > 3500 * 0.8) {
         lastWeightLabel.setForeground(new Color(231, 76, 60));
       } else {
         lastWeightLabel.setForeground(new Color(46, 204, 113));
