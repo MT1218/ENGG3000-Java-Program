@@ -221,10 +221,15 @@ public class Gui {
     boolean wasLaptopSize = isLaptopSize;
     isLaptopSize = width < 1600;
 
-    // Update notification panel width
-    if (notificationPanel != null) {
-      int panelWidth = width / 2;
-      int panelX = (width - panelWidth) / 2;
+    // Update notification panel width based on frame, but center on bridge panel
+    if (notificationPanel != null && bridgePanel != null) {
+      // Calculate position based on bridge panel center
+      java.awt.Point bridgePanelLocationInLayeredPane = javax.swing.SwingUtilities.convertPoint(
+          bridgePanel.getParent(), bridgePanel.getX(), bridgePanel.getY(), frame.getLayeredPane());
+
+      int panelWidth = frame.getWidth() / 3;
+      int bridgeCenterX = bridgePanelLocationInLayeredPane.x + bridgePanel.getWidth() / 2;
+      int panelX = bridgeCenterX - panelWidth / 2;
       notificationPanel.setBounds(panelX, notificationY, panelWidth, 70);
     }
 
@@ -345,15 +350,16 @@ public class Gui {
     warningContentPanel.setBackground(new Color(231, 76, 60, 220));
     warningContentPanel.setBorder(BorderFactory.createCompoundBorder(
         BorderFactory.createLineBorder(Color.WHITE, 3),
-        BorderFactory.createEmptyBorder(30, 50, 30, 50)));
+        BorderFactory.createEmptyBorder(isLaptopSize ? 20 : 30, isLaptopSize ? 30 : 50, isLaptopSize ? 20 : 30,
+            isLaptopSize ? 30 : 50)));
 
-    JLabel warningIcon = new JLabel("COMMUNICATION LOST");
-    warningIcon.setFont(new Font("Arial", Font.BOLD, 72));
+    JLabel warningIcon = new JLabel("COMMS LOST");
+    warningIcon.setFont(new Font("Arial", Font.BOLD, isLaptopSize ? 48 : 72));
     warningIcon.setForeground(Color.WHITE);
     warningIcon.setAlignmentX(Component.CENTER_ALIGNMENT);
 
     JLabel warningLabel = new JLabel("Lost connection with ESP, attempting reconnection");
-    warningLabel.setFont(new Font("Arial", Font.BOLD, 32));
+    warningLabel.setFont(new Font("Arial", Font.BOLD, isLaptopSize ? 20 : 32));
     warningLabel.setForeground(Color.WHITE);
     warningLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
@@ -397,8 +403,14 @@ public class Gui {
 
     // Add to layered pane so it appears on top of everything
     frame.getLayeredPane().add(notificationPanel, javax.swing.JLayeredPane.MODAL_LAYER);
+
+    // Calculate position based on bridge panel center
+    java.awt.Point bridgePanelLocationInLayeredPane = javax.swing.SwingUtilities.convertPoint(
+        bridgePanel.getParent(), bridgePanel.getX(), bridgePanel.getY(), frame.getLayeredPane());
+
     int panelWidth = frame.getWidth() / 3;
-    int panelX = (frame.getWidth() - panelWidth) / 2;
+    int bridgeCenterX = bridgePanelLocationInLayeredPane.x + bridgePanel.getWidth() / 2;
+    int panelX = bridgeCenterX - panelWidth / 2;
     notificationPanel.setBounds(panelX, notificationY, panelWidth, 70);
   }
 
@@ -430,9 +442,13 @@ public class Gui {
     notificationPanel.setVisible(true);
     notificationY = -70;
 
-    // Update width in case frame was resized
+    // Calculate position based on bridge panel center
+    java.awt.Point bridgePanelLocationInLayeredPane = javax.swing.SwingUtilities.convertPoint(
+        bridgePanel.getParent(), bridgePanel.getX(), bridgePanel.getY(), frame.getLayeredPane());
+
     int panelWidth = frame.getWidth() / 3;
-    int panelX = (frame.getWidth() - panelWidth) / 2;
+    int bridgeCenterX = bridgePanelLocationInLayeredPane.x + bridgePanel.getWidth() / 2;
+    int panelX = bridgeCenterX - panelWidth / 2;
     notificationPanel.setBounds(panelX, notificationY, panelWidth, 70);
 
     // Slide in animation
@@ -455,8 +471,13 @@ public class Gui {
   }
 
   private void slideOutNotification(Runnable onComplete) {
+    // Calculate position based on bridge panel center
+    java.awt.Point bridgePanelLocationInLayeredPane = javax.swing.SwingUtilities.convertPoint(
+        bridgePanel.getParent(), bridgePanel.getX(), bridgePanel.getY(), frame.getLayeredPane());
+
     int panelWidth = frame.getWidth() / 3;
-    int panelX = (frame.getWidth() - panelWidth) / 2;
+    int bridgeCenterX = bridgePanelLocationInLayeredPane.x + bridgePanel.getWidth() / 2;
+    int panelX = bridgeCenterX - panelWidth / 2;
     notificationSlideTimer = new Timer(10, e -> {
       notificationY -= 3;
       if (notificationY <= -70) {
