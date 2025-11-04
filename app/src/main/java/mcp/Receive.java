@@ -149,7 +149,8 @@ public class Receive extends Thread {
 
       if (content.contains("mode_change_queued")) {
         userInterface.showNotification("Mode change queued - waiting for safe state");
-        userInterface.updateMessageLog(wrapMessage("INFO: Mode change request queued, waiting for bridge to reach safe state"));
+        userInterface
+            .updateMessageLog(wrapMessage("INFO: Mode change request queued, waiting for bridge to reach safe state"));
       } else if (content.contains("full_test_starting")) {
         userInterface.showNotification("Full system test starting");
         userInterface.updateMessageLog(wrapMessage("INFO: Full system test sequence initiated - please standby"));
@@ -189,7 +190,8 @@ public class Receive extends Thread {
 
       if (content.contains("override_denied_traffic_present")) {
         userInterface.showNotification("Cannot enter override - traffic present");
-        userInterface.updateMessageLog(wrapMessage("ERROR: Override mode denied - Clear all traffic before switching modes"));
+        userInterface
+            .updateMessageLog(wrapMessage("ERROR: Override mode denied - Clear all traffic before switching modes"));
       } else if (content.contains("mode_change_timeout")) {
         userInterface.showNotification("Mode change timeout");
         userInterface.updateMessageLog(wrapMessage("ERROR: Mode change request timed out - please try again"));
@@ -221,13 +223,16 @@ public class Receive extends Thread {
 
       if (content.equals("allow_boat_traffic")) {
         userInterface.showNotification("Boat traffic sequence initiated");
-        userInterface.updateMessageLog(wrapMessage("COMMAND_EXECUTION: allow_boat_traffic command executed successfully"));
+        userInterface
+            .updateMessageLog(wrapMessage("COMMAND_EXECUTION: allow_boat_traffic command executed successfully"));
       } else if (content.equals("allow_road_traffic")) {
         userInterface.showNotification("Road traffic sequence initiated");
-        userInterface.updateMessageLog(wrapMessage("COMMAND_EXECUTION: allow_road_traffic command executed successfully"));
+        userInterface
+            .updateMessageLog(wrapMessage("COMMAND_EXECUTION: allow_road_traffic command executed successfully"));
       } else if (content.equals("run_full_test_success")) {
         userInterface.showNotification("All tests completed successfully");
-        userInterface.updateMessageLog(wrapMessage("COMMAND_EXECUTION: Full system test completed - all phases passed"));
+        userInterface
+            .updateMessageLog(wrapMessage("COMMAND_EXECUTION: Full system test completed - all phases passed"));
       } else {
         userInterface.updateMessageLog(wrapMessage("RECEIVED: EXECUTED: " + content));
       }
@@ -241,33 +246,39 @@ public class Receive extends Thread {
 
       if (content.contains("bridge_is_executing_sequence")) {
         userInterface.showNotification("Bridge executing sequence - please wait");
-        userInterface.updateMessageLog(wrapMessage("SYSTEM_UPDATE: Bridge is currently executing a sequence - wait for completion"));
+        userInterface.updateMessageLog(
+            wrapMessage("SYSTEM_UPDATE: Bridge is currently executing a sequence - wait for completion"));
       } else if (content.equals("restarting")) {
         userInterface.showNotification("Bridge system restarting");
         userInterface.updateMessageLog(wrapMessage("SYSTEM_UPDATE: ESP32 system restart initiated"));
       } else if (content.equals("restart_required")) {
         userInterface.showNotification("Restart required");
         userInterface
-            .updateMessageLog(wrapMessage("SYSTEM_UPDATE: System restart required - no operations will execute until restart"));
+            .updateMessageLog(
+                wrapMessage("SYSTEM_UPDATE: System restart required - no operations will execute until restart"));
       } else if (content.contains("diagnostics_command_only")) {
         userInterface.showNotification("Diagnostics required - bridge state unknown");
         userInterface.updateMessageLog(wrapMessage(
             "SYSTEM_UPDATE: Please run diagnostics - bridge state unknown, no other commands accepted"));
       } else if (content.contains("diagnostic_mode")) {
         userInterface.showNotification("Diagnostic mode active");
-        userInterface.updateMessageLog(wrapMessage("SYSTEM_UPDATE: System entered diagnostic mode - determining bridge state"));
+        userInterface
+            .updateMessageLog(wrapMessage("SYSTEM_UPDATE: System entered diagnostic mode - determining bridge state"));
       } else if (content.equals("recovered")) {
         userInterface.showNotification("Bridge state recovered");
         userInterface
-            .updateMessageLog(wrapMessage("SYSTEM_UPDATE: Bridge state successfully determined - normal operations resumed"));
+            .updateMessageLog(
+                wrapMessage("SYSTEM_UPDATE: Bridge state successfully determined - normal operations resumed"));
       } else if (content.contains("bridge_state_mismatch")) {
         userInterface.showNotification("Bridge state mismatch detected");
         userInterface
-            .updateMessageLog(wrapMessage("SYSTEM_UPDATE: Bridge state does not match expected state - verification in progress"));
+            .updateMessageLog(
+                wrapMessage("SYSTEM_UPDATE: Bridge state does not match expected state - verification in progress"));
       } else if (content.contains("detected_boats_while_closing")) {
         userInterface.showNotification("Boats detected - reopening bridge");
         userInterface
-            .updateMessageLog(wrapMessage("SYSTEM_UPDATE: Boats detected during bridge closing - returning to BOATS_PASSING state"));
+            .updateMessageLog(
+                wrapMessage("SYSTEM_UPDATE: Boats detected during bridge closing - returning to BOATS_PASSING state"));
       } else if (content.contains("bridge_overloaded")) {
         userInterface.showNotification("Bridge overloaded - skipping open");
         userInterface.updateMessageLog(wrapMessage(
