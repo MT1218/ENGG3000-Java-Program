@@ -693,54 +693,6 @@ public class Gui {
     Color buttonColor = new Color(101, 181, 109);
     int buttonHeight = isLaptopSize ? 28 : 32;
 
-    // Emergency Controls Section
-    addSectionLabel(panel, "EMERGENCY CONTROLS", gbc, 0);
-
-    gbc.gridy = 1;
-    JButton emergencyStopButton = new JButton("EMERGENCY STOP");
-    emergencyStopButton.setBackground(new Color(192, 57, 43));
-    emergencyStopButton.setForeground(Color.WHITE);
-    emergencyStopButton.setFont(new Font("Arial", Font.BOLD, 11));
-    emergencyStopButton.setFocusPainted(false);
-    emergencyStopButton.setBorderPainted(false);
-    emergencyStopButton.setPreferredSize(new Dimension(170, buttonHeight));
-    emergencyStopButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-    emergencyStopButton.putClientProperty("originalColor", new Color(192, 57, 43));
-
-    emergencyStopButton.addMouseListener(new java.awt.event.MouseAdapter() {
-      public void mouseEntered(java.awt.event.MouseEvent evt) {
-        if (emergencyStopButton.isEnabled()) {
-          emergencyStopButton.setBackground(new Color(210, 63, 50));
-        }
-      }
-
-      public void mouseExited(java.awt.event.MouseEvent evt) {
-        if (emergencyStopButton.isEnabled()) {
-          emergencyStopButton.setBackground(new Color(192, 57, 43));
-        }
-      }
-    });
-
-    emergencyStopButton.addActionListener(e -> {
-      int confirm = JOptionPane.showConfirmDialog(
-          frame,
-          "Activate EMERGENCY STOP?\n\nThis will:\n- Stop all motors immediately\n- Activate all warning lights" +
-              "\n- Sound alarm buzzer\n- Enter diagnostic mode\n- Require manual recovery",
-          "Emergency Stop Confirmation",
-          JOptionPane.YES_NO_OPTION,
-          JOptionPane.WARNING_MESSAGE);
-
-      if (confirm == JOptionPane.YES_OPTION) {
-        if (mcpSendObject != null) {
-          mcpSendObject.sendMessage("emergency_stop");
-          updateMessageLog("SENT: emergency_stop");
-        } else {
-          updateMessageLog("ERROR: Send object not initialized");
-        }
-      }
-    });
-    panel.add(emergencyStopButton, gbc);
-
     // Traffic Sequence Section
     trafficSequenceLabel = addSectionLabel(panel, "TRAFFIC SEQUENCES - SWITCH TO OVERRIDE MODE TO ENABLE", gbc, 2);
     addControlButton(panel, "ALLOW BOAT TRAFFIC", buttonColor, "allow_boat_traffic", gbc, 3, buttonHeight);
@@ -793,14 +745,6 @@ public class Gui {
     Component[] components = panel.getComponents();
     for (Component component : components) {
       if (component instanceof JButton || component instanceof JCheckBox) {
-        // Skip emergency stop button - it should always be enabled
-        if (component instanceof JButton) {
-          JButton button = (JButton) component;
-          if (button.getText().equals("EMERGENCY STOP")) {
-            continue;
-          }
-        }
-
         component.setEnabled(false);
 
         if (component instanceof JButton) {
@@ -1072,14 +1016,6 @@ public class Gui {
     Component[] components = controlPanel.getComponents();
     for (Component component : components) {
       if (component instanceof JButton || component instanceof JCheckBox) {
-        // Skip emergency stop button - it should always be enabled
-        if (component instanceof JButton) {
-          JButton button = (JButton) component;
-          if (button.getText().equals("EMERGENCY STOP")) {
-            continue;
-          }
-        }
-
         component.setEnabled(enabled);
 
         if (component instanceof JButton) {

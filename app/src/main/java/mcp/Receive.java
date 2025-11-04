@@ -63,10 +63,6 @@ public class Receive extends Thread {
             userInterface.updateMessageLog(wrapMessage("RECEIVED: WEIGHT_CHECK: " + weight));
           }
         }
-        // Handle EMERGENCY_STOP messages
-        else if (receivedMessage.startsWith("EMERGENCY_STOP:") || receivedMessage.startsWith("EMERGENCY_STOP :")) {
-          handleEmergencyStop(receivedMessage);
-        }
         // Handle MODE_CHANGE messages
         else if (receivedMessage.startsWith("MODE_CHANGE:") || receivedMessage.startsWith("MODE_CHANGE :")) {
           handleModeChange(receivedMessage);
@@ -104,20 +100,6 @@ public class Receive extends Thread {
       } catch (Exception e) {
         System.out.println("Unexpected error in receive: " + e.getMessage());
         e.printStackTrace();
-      }
-    }
-  }
-
-  private void handleEmergencyStop(String message) {
-    int colonIndex = message.indexOf(":");
-    if (colonIndex != -1 && colonIndex + 1 < message.length()) {
-      String content = message.substring(colonIndex + 1).trim();
-
-      if (content.contains("activated")) {
-        String notificationText = "EMERGENCY STOP ACTIVATED";
-        userInterface.showNotification(notificationText);
-        userInterface.updateMessageLog(wrapMessage(
-            "EMERGENCY STOP: System emergency stop has been activated - Mode: Override, State: Diagnostic"));
       }
     }
   }
