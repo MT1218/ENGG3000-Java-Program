@@ -1,6 +1,8 @@
 # ENGG3000-Java-Program
 
- Java Swing application as a part of the ENGG3000 unit. Read more [about this project](http://mt1218.github.io/p/engg3000-vertical-lift-bridge/). Used for remote monitoring and control of the ESP32 bridge controller program.
+ Java Swing application as a part of the ENGG3000 unit.
+ Read more [about this project](http://mt1218.github.io/p/engg3000-vertical-lift-bridge/).
+ Used for remote monitoring and control of the ESP32 bridge controller program.
 
 ## Summary
 
